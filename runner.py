@@ -5,6 +5,7 @@ from torch import nn
 
 from mpydge.datasets.malice_churn import load
 from mpydge.models.some import Hydrogenium
+from mpydge.models.classic import LogitModel
 from mpydge.models.classic import ProbitModel
 
 
@@ -25,7 +26,7 @@ model = LogitModel(dimensionality_embedding=data.embedding_sizes,
 """
 #"""
 model = ProbitModel(dimensionality_embedding=data.embedding_sizes,
-                           dimensionality_numerical=data.numerical_sizes)
+                    dimensionality_numerical=data.numerical_sizes)
 #"""
 
 print(model)

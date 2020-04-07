@@ -2,7 +2,7 @@
 
 import numpy
 import pandas
-from data_keeper.the_keeper import TheKeeper
+from mpydge.data_keeper.the_keeper import TheKeeper
 
 import torch
 

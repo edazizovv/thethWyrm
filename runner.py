@@ -3,9 +3,9 @@
 import torch
 from torch import nn
 
-from datasets.malice_churn import load
-from models.some import Hydrogenium
-from models.classic import LogitModel, ProbitModel
+from mpydge.datasets.malice_churn import load
+from mpydge.models.some import Hydrogenium
+from mpydge.models.classic import ProbitModel
 
 
 # Load the Data

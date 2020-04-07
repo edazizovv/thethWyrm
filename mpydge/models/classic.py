@@ -2,8 +2,8 @@
 
 from torch import nn
 
-from models.some import Hydrogenium
-from utils.torchy import ERF
+from mpydge.models.some import Hydrogenium
+from mpydge.utils import ERF
 
 
 class LogitModel(Hydrogenium):

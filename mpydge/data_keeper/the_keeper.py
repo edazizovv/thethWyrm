@@ -8,7 +8,7 @@ class TheTuple:
 
 
 class TheKeeper:
-    def __init__(self, data):
+    def __init__(self, data=None):
         self.data = data
         self.train = TheTuple()
         self.validation = TheTuple()

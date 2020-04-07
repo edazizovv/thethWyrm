@@ -2,7 +2,7 @@
 
 import numpy
 import pandas
-from mpydge.data_keeper.the_keeper import TheKeeper
+from mpydge.data_keeper.the_keeper import Medium
 
 import torch
 
@@ -10,9 +10,30 @@ import torch
 def load(verbose=True, test_partition=0.2, validation_partition=0.2):
     # Watch the Data
 
+    categorical_columns = ['Geography', 'Gender', 'HasCrCard', 'IsActiveMember']
+    numerical_columns = ['CreditScore', 'Age', 'Tenure', 'Balance', 'NumOfProducts', 'EstimatedSalary']
+
+    outputs = ['Exited']
+
+    d = './mpydge/datasets/data/Churn_Modelling.csv'
+    data_set = pandas.read_csv(d)
+
+    for category in categorical_columns:
+        data_set[category] = data_set[category].astype('category')
+
+    data_set[outputs[0]] = data_set[outputs[0]].astype('category')
+
+    data = Medium(data_frame=data_set, target=outputs)
+
+    return data
+
+
+def load_old(verbose=True, test_partition=0.2, validation_partition=0.2):
+    # Watch the Data
+
     d = './datasets/data/Churn_Modelling.csv'
-    dataset = pandas.read_csv(d)
-    data = TheKeeper(dataset)
+    data_set = pandas.read_csv(d)
+    data = Medium(data_set)
 
     # Data Preprocessing
 
@@ -22,11 +43,11 @@ def load(verbose=True, test_partition=0.2, validation_partition=0.2):
     outputs = ['Exited']
 
     for category in categorical_columns:
-        dataset[category] = dataset[category].astype('category')
+        data_set[category] = data_set[category].astype('category')
 
-    categorical_data = numpy.stack([dataset[col].cat.codes.values for col in categorical_columns], axis=1)
-    numerical_data = numpy.stack([dataset[col].values for col in numerical_columns], axis=1)
-    output_data = dataset[outputs].values
+    categorical_data = numpy.stack([data_set[col].cat.codes.values for col in categorical_columns], axis=1)
+    numerical_data = numpy.stack([data_set[col].values for col in numerical_columns], axis=1)
+    output_data = data_set[outputs].values
 
     if verbose:
         print(categorical_data.shape)
@@ -39,7 +60,7 @@ def load(verbose=True, test_partition=0.2, validation_partition=0.2):
     numerical_data = torch.tensor(numerical_data, dtype=torch.float)
     output_data = torch.tensor(output_data).flatten()
 
-    embedding_sizes = [(len(dataset[col].cat.categories), min(50, (len(dataset[col].cat.categories) + 1) // 2)) for col
+    embedding_sizes = [(len(data_set[col].cat.categories), min(50, (len(data_set[col].cat.categories) + 1) // 2)) for col
                        in categorical_columns]
 
     if verbose:

@@ -20,14 +20,13 @@ model = Hydrogenium(dimensionality_embedding=data.embedding_sizes, dimensionalit
                     layers_dimensions=[2], activators=[nn.Sigmoid], preprocessor=None, embeddingdrop=0.0, activators_args={},
                     interprocessors=None, interdrops=None, postlayer=None)
 """
-"""
-model = LogitModel(dimensionality_embedding=data.embedding_sizes,
-                   dimensionality_numerical=data.numerical_sizes)
-"""
 #"""
+model = LogitModel(data=data)
+#"""
+"""
 model = ProbitModel(dimensionality_embedding=data.embedding_sizes,
                     dimensionality_numerical=data.numerical_sizes)
-#"""
+"""
 
 print(model)
 

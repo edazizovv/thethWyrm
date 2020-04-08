@@ -38,9 +38,9 @@ optimiser = torch.optim.Adam(model.parameters(), lr=0.001)
 # Train the Model
 
 epochs = 300
-model.fit(data.train.categorical, data.train.numerical, data.train.output, optimiser, loss_function, data.validation.categorical, data.validation.numerical, data.validation.output, epochs)
+model.fit(optimiser, loss_function, epochs)
 
 model.fit_plot()
 
-model.summary(data.test.categorical, data.test.numerical, data.test.output, loss_function=loss_function, show_confusion_matrix=False)
+model.summary(loss_function=loss_function, show_confusion_matrix=False)
 

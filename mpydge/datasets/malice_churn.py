@@ -20,6 +20,8 @@ def load(verbose=True, test_partition=0.2, validation_partition=0.2):
 
     for category in categorical_columns:
         data_set[category] = data_set[category].astype('category')
+    for numeric in numerical_columns:
+        data_set[numeric] = data_set[numeric].astype('float64')
 
     data_set[outputs[0]] = data_set[outputs[0]].astype('category')
 

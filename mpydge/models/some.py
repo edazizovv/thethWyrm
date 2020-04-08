@@ -34,10 +34,16 @@ class Hydrogenium(nn.Module):
                  interdrops=None, postlayer=None):
         super().__init__()
 
+        self.data = data
+
+        self.epochs = None
+        self.aggregated_losses = None
+        self.validation_losses = None
+
         if data.data.categorical_embeddings is not None:
             self.all_embeddings = nn.ModuleList([nn.Embedding(ni, nf) for ni, nf in data.data.categorical_embeddings])
             if preprocessor is not None:
-                self.batch_norm_num = preprocessor(data.data.numerical[1])
+                self.batch_norm_num = preprocessor(data.data.numerical_shape)
             self.embedding_dropout = nn.Dropout(embeddingdrop)
             num_categorical_cols = sum((nf for ni, nf in data.data.categorical_embeddings))
         else:
@@ -45,7 +51,7 @@ class Hydrogenium(nn.Module):
             num_categorical_cols = 0
 
         all_layers = []
-        num_numerical_cols = data.data.numerical[1]
+        num_numerical_cols = data.data.numerical_shape
         input_size = num_categorical_cols + num_numerical_cols
 
         if not isinstance(activators, list):
@@ -72,7 +78,7 @@ class Hydrogenium(nn.Module):
         self.layers = nn.Sequential(*all_layers)
 
     def forward(self, x_categorical, x_numerical):
-        if self.all_embeddings is not None:
+        if self.data.data.categorical_embeddings is not None:
             embeddings = []
             for i, e in enumerate(self.all_embeddings):
                 embeddings.append(e(x_categorical[:, i]))
@@ -81,18 +87,17 @@ class Hydrogenium(nn.Module):
         else:
             x_embedding = None
 
-        if self.all_embeddings is not None and self.all_numerical is not None:
+        if self.data.data.categorical_embeddings is not None and self.data.data.numerical_shape is not None:
             x = torch.cat([x_embedding, x_numerical], 1)
-        if self.all_embeddings is None and self.all_numerical is not None:
+        if self.data.data.categorical_embeddings is None and self.data.data.numerical_shape is not None:
             x = torch.cat([x_numerical], 1)
-        if self.all_embeddings is not None and self.all_numerical is None:
+        if self.data.data.categorical_embeddings is not None and self.data.data.numerical_shape is None:
             x = torch.cat([x_embedding], 1)
 
         x = self.layers(x)
         return x
 
-    def fit(self, categorical_data_train, numerical_data_train, output_data_train, optimiser, loss_function,
-            categorical_data_validation, numerical_data_validation, output_data_validation, epochs=500):
+    def fit(self, optimiser, loss_function, epochs=500):
 
         self.epochs = epochs
         self.aggregated_losses = []
@@ -103,11 +108,11 @@ class Hydrogenium(nn.Module):
             for phase in ['train', 'validate']:
 
                 if phase == 'train':
-                    y_pred = self(categorical_data_train, numerical_data_train)
-                    single_loss = loss_function(y_pred, output_data_train)
+                    y_pred = self(self.data.data.train.categorical, self.data.data.train.numerical)
+                    single_loss = loss_function(y_pred, self.data.data.train.output)
                 else:
-                    y_pred = self(categorical_data_validation, numerical_data_validation)
-                    single_loss = loss_function(y_pred, output_data_validation)
+                    y_pred = self(self.data.data.validation.categorical, self.data.data.validation.numerical)
+                    single_loss = loss_function(y_pred, self.data.data.validation.output)
 
                 optimiser.zero_grad()
 
@@ -125,7 +130,6 @@ class Hydrogenium(nn.Module):
                                                                                              validation_lost))
         print('epoch: {0:3} train loss: {1:10.8f} validation loss: {2:10.8f}'.format(i, train_lost, validation_lost))
 
-
     def fit_plot(self):
 
         pyplot.plot(numpy.array(numpy.arange(self.epochs)), self.aggregated_losses, label='Train')
@@ -133,22 +137,42 @@ class Hydrogenium(nn.Module):
         pyplot.legend(loc="upper left")
         pyplot.show()
 
-    def predict(self, categorical_data, numerical_data):
+    def predict(self):
 
-        output = self(categorical_data, numerical_data)
+        output = self(self.data.data.test.categorical, self.data.data.test.numerical)
         result = numpy.argmax(output.detach().numpy(), axis=1)
 
         return result
 
-    def summary(self, categorical_data, numerical_data, output_data, loss_function=None, show_confusion_matrix=True,
+    def summary(self, on='test', loss_function=None, show_confusion_matrix=True,
                 report=False, score=None):
 
-        y_val = self(categorical_data, numerical_data)
-        y_hat = self.predict(categorical_data, numerical_data)
-        y = output_data.detach().numpy()
+        if on == 'train':
 
-        if loss_function is not None:
-            print('{0:25}: {1:10.8f}'.format(str(loss_function)[:-2], loss_function(y_val, output_data)))
+            y_val = self(self.data.data.train.categorical, self.data.data.train.numerical)
+            y_hat = self.predict()
+            y = self.data.data.test.output.detach().numpy()
+
+            if loss_function is not None:
+                print('{0:25}: {1:10.8f}'.format(str(loss_function)[:-2], loss_function(y_val, self.data.data.test.output)))
+
+        if on == 'validation':
+
+            y_val = self(self.data.data.validation.categorical, self.data.data.validation.numerical)
+            y_hat = self.predict()
+            y = self.data.data.validation.output.detach().numpy()
+
+            if loss_function is not None:
+                print('{0:25}: {1:10.8f}'.format(str(loss_function)[:-2], loss_function(y_val, self.data.data.validation.output)))
+
+        if on == 'test':
+
+            y_val = self(self.data.data.test.categorical, self.data.data.test.numerical)
+            y_hat = self.predict()
+            y = self.data.data.test.output.detach().numpy()
+
+            if loss_function is not None:
+                print('{0:25}: {1:10.8f}'.format(str(loss_function)[:-2], loss_function(y_val, self.data.data.test.output)))
 
         if show_confusion_matrix:
             seaborn.heatmap(confusion_matrix(y, y_hat), annot=True)

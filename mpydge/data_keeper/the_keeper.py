@@ -6,7 +6,7 @@ import torch
 
 class Samples:
     @staticmethod
-    def sample(categorical, numerical, output, categorical_embeddings, n_classes, test_partition, validation_partition, verbose=True):
+    def sample(categorical, numerical, output, categorical_embeddings, numerical_shape, n_classes, test_partition=0.2, validation_partition=0.2, verbose=False):
 
         # Pytorch Data Preparation
 
@@ -57,7 +57,7 @@ class Samples:
         validation = DataFormats(categorical_data_validation, numerical_data_validation, output_data_validation)
         test = DataFormats(categorical_data_test, numerical_data_test, output_data_test)
 
-        return train, validation, test, categorical_embeddings, n_classes
+        return train, validation, test, categorical_embeddings, numerical_shape, n_classes
 
 
 class DataFormats:
@@ -68,21 +68,26 @@ class DataFormats:
         self.categorical_embeddings = categorical_embeddings
         self.n_classes = n_classes
 
+    @property
+    def numerical_shape(self):
+        return self.numerical.shape[1]
+
     def gain_all(self):
-        return {'categorical': self.categorical, 'numerical': self.numerical, 'output': self.output, 'categorical_embeddings': self.categorical_embeddings, 'n_classes': self.n_classes}
+        return {'categorical': self.categorical, 'numerical': self.numerical, 'output': self.output, 'categorical_embeddings': self.categorical_embeddings, 'numerical_shape': self.numerical_shape, 'n_classes': self.n_classes}
 
 
 class DataRoles:
-    def __init__(self, train=None, validation=None, test=None, categorical_embeddings=None, n_classes=None, non_sampled=None):
+    def __init__(self, train=None, validation=None, test=None, categorical_embeddings=None, numerical_shape=None, n_classes=None, non_sampled=None):
 
         if non_sampled is None:
             self.train = train
             self.validation = validation
             self.test = test
             self.categorical_embeddings = categorical_embeddings
+            self.numerical_shape = numerical_shape
             self.n_classes = n_classes
         else:
-            self.train, self.validation, self.test, self.categorical_embeddings, self.n_classes = Samples.sample(**non_sampled.gain_all())
+            self.train, self.validation, self.test, self.categorical_embeddings, self.numerical_shape, self.n_classes = Samples.sample(**non_sampled.gain_all())
 
 
 class Medium:
@@ -99,7 +104,7 @@ class Medium:
     def data(self):
         data = DataFormats()
         data.categorical = numpy.stack([self.data_frame[col].cat.codes.values for col in self.data_frame.columns.values if (self.data_frame[col].dtype.name == 'category') and (col not in self.target)], axis=1)
-        data.numerical = numpy.stack([self.data_frame[col].cat.codes.values for col in self.data_frame.columns.values if (self.data_frame[col].dtype.name == 'float64') and (col not in self.target)], axis=1)
+        data.numerical = numpy.stack([self.data_frame[col].values for col in self.data_frame.columns.values if (self.data_frame[col].dtype.name == 'float64') and (col not in self.target)], axis=1)
         data.output = self.data_frame[self.target].values
         if self._embedding_strategy == 'default':
             data.categorical_embeddings = [(len(self.data_frame[col].cat.categories), min(50, (len(self.data_frame[col].cat.categories) + 1) // 2)) for col in self.data_frame.columns.values if (self.data_frame[col].dtype.name == 'category') and (col not in self.target)]

@@ -12,21 +12,24 @@ from mpydge.models.classic import ProbitModel
 # Load the Data
 
 data = load()
+print(data.data.train.categorical.size(), data.data.train.numerical.size())
+print(data.data.validation.categorical.size(), data.data.validation.numerical.size())
+print(data.data.test.categorical.size(), data.data.test.numerical.size())
 
 # Initialise the Model
 
-"""
-model = Hydrogenium(dimensionality_embedding=data.embedding_sizes, dimensionality_numerical=data.numerical_sizes, dimensionality_output=2,
+#"""
+model = Hydrogenium(data=data,
                     layers_dimensions=[2], activators=[nn.Sigmoid], preprocessor=None, embeddingdrop=0.0, activators_args={},
                     interprocessors=None, interdrops=None, postlayer=None)
-"""
 #"""
+"""
 model = LogitModel(data=data)
-#"""
 """
-model = ProbitModel(dimensionality_embedding=data.embedding_sizes,
-                    dimensionality_numerical=data.numerical_sizes)
 """
+model = ProbitModel(data=data)
+"""
+
 
 print(model)
 

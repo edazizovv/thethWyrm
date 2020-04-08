@@ -24,7 +24,7 @@ class Samples:
         samples = [int(test_partition * len(output))]
         samples = [len(output) - samples[0]] + samples
         a = numpy.array(numpy.arange(len(output)))
-        a_train = numpy.random.choice(a, size=samples[0])
+        a_train = numpy.random.choice(a, size=samples[0], replace=False)
         a_test = numpy.setdiff1d(a, a_train)
 
         categorical_data_train, categorical_data_test = categorical[a_train], categorical[a_test]
@@ -41,12 +41,12 @@ class Samples:
         samples = [int(validation_partition * len(output_data_train))]
         samples = [len(output_data_train) - samples[0]] + samples
         a = numpy.array(numpy.arange(len(output_data_train)))
-        a_train = numpy.random.choice(a, size=samples[0])
+        a_train = numpy.random.choice(a, size=samples[0], replace=False)
         a_validation = numpy.setdiff1d(a, a_train)
 
-        categorical_data_train, categorical_data_validation = categorical[a_train], categorical[a_validation]
-        numerical_data_train, numerical_data_validation = numerical[a_train], numerical[a_validation]
-        output_data_train, output_data_validation = output[a_train], output[a_validation]
+        categorical_data_train, categorical_data_validation = categorical_data_train[a_train], categorical_data_train[a_validation]
+        numerical_data_train, numerical_data_validation = numerical_data_train[a_train], numerical_data_train[a_validation]
+        output_data_train, output_data_validation = output_data_train[a_train], output_data_train[a_validation]
 
         if verbose:
             print(categorical_data_train.shape, categorical_data_validation.shape, categorical_data_test.shape)
@@ -93,6 +93,7 @@ class DataRoles:
 class Medium:
     def __init__(self, data_frame, target, embedding_strategy='default', embedding_explicit=None):
         self.data_frame = data_frame
+        self._data = None
         if isinstance(target, list):
             self.target = target
         else:
@@ -102,6 +103,11 @@ class Medium:
 
     @property
     def data(self):
+        if self._data is None:
+            self.data_cast()
+        return self._data
+
+    def data_cast(self):
         data = DataFormats()
         data.categorical = numpy.stack([self.data_frame[col].cat.codes.values for col in self.data_frame.columns.values if (self.data_frame[col].dtype.name == 'category') and (col not in self.target)], axis=1)
         data.numerical = numpy.stack([self.data_frame[col].values for col in self.data_frame.columns.values if (self.data_frame[col].dtype.name == 'float64') and (col not in self.target)], axis=1)
@@ -116,7 +122,6 @@ class Medium:
             data.n_classes = self.data_frame[self.target[0]].cat.categories.values.shape[0]
         else:
             data.n_classes = None
-        data = DataRoles(non_sampled=data)
-        return data
+        self._data = DataRoles(non_sampled=data)
 
 

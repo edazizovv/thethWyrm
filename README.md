@@ -1,6 +1,37 @@
 # mpydge
 
 # Data
+
+##General concepts
+Basic instrument for data guidance -- `pandas.DataFrame`. 
+If you want to use some data, read it at first with `pandas`.
+
+It is convenient to separate data onto two basic types: categorical and numerical
+(we do not support ordered categories yet, sorry) and thus we do. 
+Currently `pandas` supports wide variety of data types, but for the package's
+computations you have to set all needed fields' data types to these two:
+* `'category'` (so that data is treated as categorical)
+* `'float64'` (so that data is trated as numerical)
+
+All other data types will be ignored. You can assess what data type column has
+in the following way: `print(data['column'].dtype.name`. 
+
+For example, the following `'column1'` will be correctly treated as categorical:
+
+```buildoutcfg
+>>> a = ... # a pandas.DataFrame instance
+>>> print(a['column1'].dtype.name)
+'category'
+```
+
+On the contrary, the following `'column2'` is not treated as numerical correctly
+```buildoutcfg
+>>> a = ... # a pandas.DataFrame instance
+>>> print(a['column2'].dtype.name)
+'int64'
+```
+
+## Out data format
 We use a special class to hold all components of data sets, including:
 * train sample
 * validation sample
@@ -9,56 +40,39 @@ We use a special class to hold all components of data sets, including:
 Each of them contains of:
 * categorical fields
 * numerical fields
-* output fields
+* output field (could be either categorical or numerical)
 
-It is a convention for us to initialise data with `TheKeeper` data class
-
-`class mpydge.data_keeper.the_keeper.TheKeeper(data=None)`
-
-As you can see, currently it does not have any strong requirements to be initialised. Just simply write
+It is a convention for us to initialise data with `Conductor` data class
 
 ```
-from mpydge.data_keeper.the_keeper import TheKeeper
-data = TheKeeper()
+class Conductor(data_frame, target, 
+                embedding_strategy='default', embedding_explicit=None):
+                """
+                data_frame            a pandas.DataFrame instance to use
+                target                a string = name of the target field
+                embedding_strategy    a strategy describing how to embed categorical fields
+                                      'default' uses special rule of thumb to embed fields
+                                      could be set to None (needs embedding_explicit to be defined)
+                embedding_explicit    if embedding_strategy is None, uses explicitly defined embedding dimensions
+                """
 ```
 
-and the instance will be initialised. Then you can consequently set all needed components
-
-For example, train sample:
+After initialisation all data is available in the described formerly way through data field:
 
 ```
-data.train.categorical = my_categorical_data_for_train
-data.train.numerical = my_numerical_data_for_train
-data.train.output = my_output_data_for_train
-```
+import pandas
+from mpydge.data_keeper.keeper import Conductor
 
-And so validation and test:
+d = './my_data_set.csv'
+data_frame = pandas.read_csv(d)
+data_hub = Conductor(data_frame=data_frame, target='my_target_column')
 
-```
-data.test.numerical = ...
-data.validation.output = ...
-```
+data_hub.data.train               # here lies all train data
+data_hub.data.validation          # here lies all validation data
+data_hub.data.test                # here lies all test data
 
-# Models
-All models have unified interface and are applied with several steps. 
-
-1. Initialisation. In this step you set an instance of model class
-2. Fit. Now you train the model instance and yield predictive model with training/validation results
-3. Inference. Here you use the trained model with any data -- either already used  or new (for example, with test sample)
-
-Notice, that models are data-centric, what means that their concept is **model for dataset**:
-in the initialisation step you set key data options (e.g. dimensionality)
-and pass training options (e.g. loss function) only in fitting step.
-Compare this with, for example, Scikit-Learn interface which is model-centric
-(**data for model**): there in initialisation step you set key model options
-(e.g. loss function) while passing data only at fitting stage
-
-Lets start with an example LogitModel (suppose we already have out `data` variable):
-
-```buildoutcfg
-from mpydge.models.classic import LogitModel
-
-model = LogitModel(dimensionality_embedding=data.embedding_sizes,
-                   dimensionality_numerical=data.numerical_sizes)
-model.fit(categorical_data_train=data.train.categorical, data.train.numerical, data.train.output, optimiser, loss_function, data.validation.categorical, data.validation.numerical, data.validation.output, epochs)
+# for example, let's take a look at train data
+data_hub.data.train.categorical   # here lies categorical train data
+data_hub.data.train.numerical     # here lies numerical train data
+data_hub.data.trin.output         # here lies output (=target) train data
 ```

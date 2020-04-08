@@ -2,7 +2,7 @@
 
 import numpy
 import pandas
-from mpydge.data_keeper.keeper import Medium
+from mpydge.data_keeper.keeper import Conductor
 
 import torch
 
@@ -25,7 +25,7 @@ def load(verbose=True, test_partition=0.2, validation_partition=0.2):
 
     data_set[outputs[0]] = data_set[outputs[0]].astype('category')
 
-    data = Medium(data_frame=data_set, target=outputs)
+    data = Conductor(data_frame=data_set, target=outputs)
 
     return data
 
@@ -35,7 +35,7 @@ def load_old(verbose=True, test_partition=0.2, validation_partition=0.2):
 
     d = './datasets/data/Churn_Modelling.csv'
     data_set = pandas.read_csv(d)
-    data = Medium(data_set)
+    data = Conductor(data_set)
 
     # Data Preprocessing
 

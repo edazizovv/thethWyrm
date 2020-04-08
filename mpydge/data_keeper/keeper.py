@@ -90,7 +90,7 @@ class DataRoles:
             self.train, self.validation, self.test, self.categorical_embeddings, self.numerical_shape, self.n_classes = Samples.sample(**non_sampled.gain_all())
 
 
-class Medium:
+class Conductor:
     def __init__(self, data_frame, target, embedding_strategy='default', embedding_explicit=None):
         self.data_frame = data_frame
         self._data = None

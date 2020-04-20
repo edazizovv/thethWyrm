@@ -26,15 +26,27 @@ class SemiLinearTemperatured(nn.Module):
 
         self.input_features = input_features
         self.output_features = output_features
-        self.tau = tau
-        self.w = torch.arange((output_features - 1)).view(-1, (output_features - 1))
-        self.betas = nn.Parameter(torch.Tensor((output_features - 1)))
+        self.tau = torch.tensor([tau])
+        self.w = torch.arange((output_features - 1), dtype=torch.float).view(-1, (output_features - 1))
+        #self.betas = nn.Parameter(torch.Tensor((output_features - 1)))
 
-        self.betas.data.uniform(-1, 1)
+        #self.betas.data.uniform(-1, 1)
+
+        self.betas = nn.Parameter(torch.rand((output_features - 1)))
 
     def forward(self, x):
         b = torch.cumsum(torch.cat((torch.Tensor([0]), torch.sort(self.betas)[0] * -1)), 0)
         softmax = torch.nn.Softmax(dim=1)
+        print(self.input_features)
+        print(self.output_features)
+        print(x.dtype)
+        print(x.size())
+        print(self.w.dtype)
+        print(self.w.size())
+        print(b.dtype)
+        print(b.size())
+        print(self.tau.dtype)
+        print(self.tau.size())
         output = softmax((torch.mm(x, self.w) + b) / self.tau)
         return output
 

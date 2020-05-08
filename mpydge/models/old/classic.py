@@ -2,7 +2,7 @@
 
 from torch import nn
 
-from mpydge.models.some import Hydrogenium
+from mpydge.models.old.mounted import Hydrogenium
 from mpydge.utils.torchy import ERF
 
 

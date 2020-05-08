@@ -4,10 +4,7 @@ import torch
 from torch import nn
 
 from mpydge.datasets.malice_churn import load
-from mpydge.models.some import Hydrogenium
-from mpydge.models.classic import LogitModel
-from mpydge.models.classic import ProbitModel
-from mpydge.models.some import Helium
+from mpydge.models.old.mounted import Helium
 
 
 # Load the Data

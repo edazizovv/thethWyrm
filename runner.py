@@ -3,8 +3,8 @@
 import torch
 from torch import nn
 
-from mpydge.datasets.malice_churn import load
-from mpydge.models.old.mounted import Helium
+from mpydge.holy.datasets.malice_churn import load
+from mpydge.holy.models import Helium
 
 
 # Load the Data

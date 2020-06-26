@@ -1,3 +1,10 @@
+#
+import numpy
+import pandas
+from scipy import stats
+from sklearn.metrics import r2_score
+from sklearn.linear_model import LinearRegression as sk_OLS
+from sklearn.feature_selection import RFECV
 
 
 class AnyModel:
@@ -24,6 +31,9 @@ class AnyModel:
         raise Exception("Not yet!")
 
     def melt_correlation(self):
+        raise Exception("Not yet!")
+
+    def correlation_matrix(self):
         raise Exception("Not yet!")
 
     def storm(self):
@@ -53,17 +63,18 @@ class OLS(AnyModel):
         X_train, Y_train = self.data.values
 
         self.model_ = self.model(**self.params_current)
-        self.model_.fit(X_train, Y_train)
+        self.model_.fit(X_train, Y_train.ravel())
 
     def _summarize(self):
 
         # https://stackoverflow.com/questions/27928275/find-p-value-significance-in-scikit-learn-linearregression
 
         X, Y = self.data.values
+        Y = Y.ravel()
         names, _ = self.data.names
 
-        params = numpy.append(self.model.intercept_, self.model.coef_)
-        predictions = self.model.predict(X)
+        params = numpy.append(self.model_.intercept_, self.model_.coef_)
+        predictions = self.model_.predict(X)
 
         newX = pandas.DataFrame({"Constant": numpy.ones(len(X))}).join(pandas.DataFrame(X))
         MSE = (sum((Y - predictions) ** 2)) / (len(newX) - len(newX.columns))
@@ -93,15 +104,25 @@ class OLS(AnyModel):
 
     def summarize(self):
 
-        self._summarize()
+        return self._summarize()
 
-    def _melt_coeff_censor(self, significance):
+    def melt_coeff(self, min_left=1, step=1, cv=5):
+
+        X, Y = self.data.values
+        model_ = self.model(**self.params_current)
+        rfe = RFECV(model_, min_features_to_select=min_left, step=step, cv=cv)
+        rfe.fit(X, Y.ravel())
+        self.data.mask.d1 = rfe.support_
+        X, Y = self.data.values
+        self.model_ = self.model(**self.params_current)
+        self.model_.fit(X, Y)
+
+    def _melt_significance_censor(self, significance):
 
         p_values = self._summarize()['Probabilities'].values[1:]
-        pv_mask = p_values < significance
-        mask = self.data.mask
-        mask[1] = pv_mask
-        self.data.mask = mask
+        diff = p_values < significance
+        self.data.mask.d1[self.data.mask.d1] = diff
+        return diff
 
     def melt_significance(self, significance=0.05):
 
@@ -109,20 +130,36 @@ class OLS(AnyModel):
         while not done:
 
             XX, YY = self.data.values
-            model_ = self.model(**self.params_current)
-            model_.fit(XX, YY)
+            self.model_ = self.model(**self.params_current)
+            self.model_.fit(XX, YY.ravel())
 
-            self._melt_coeff_censor(significance)
-            mask = self.data.mask[1]
-            done = mask.sum() == 0 or mask.all() == 1
+            diff = self._melt_significance_censor(significance)
+            mask = self.data.mask.d1
+            done = mask.sum() == 0 or diff.all() == 1
+
+    def _correlator(self, y, x):
+
+        model_ = self.model(**self.params_current)
+        model_.fit(x.reshape(-1, 1), y)
+        y_hat = model_.predict(x.reshape(-1, 1))
+        score = r2_score(y, y_hat)
+        return score
+
+    def correlation_matrix(self):
+
+        X, _ = self.data.values
+        names, _ = self.data.names
+        table = pandas.DataFrame(data=X, columns=names)
+        corr_table = table.corr(method=self._correlator)
+        return corr_table
 
     def predict(self, dim0_mask=None):
         if dim0_mask is None:
             X, _ = self.data.values
         else:
-            old_mask = self.data.mask
-            self.data.mask = [dim0_mask, None]
+            old_d0 = self.data.mask.d1
+            self.data.mask.d0 = dim0_mask
             X, _ = self.data.values
-            self.data.mask = old_mask
-        predicted = self.model.predict(X)
+            self.data.mask.d0 = old_d0
+        predicted = self.model_.predict(X)
         return predicted

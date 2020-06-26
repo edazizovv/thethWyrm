@@ -10,9 +10,9 @@ from mpydge.holy.models import Helium
 # Load the Data
 
 data = load()
-print(data.data.train.categorical.size(), data.data.train.numerical.size())
-print(data.data.validation.categorical.size(), data.data.validation.numerical.size())
-print(data.data.test.categorical.size(), data.data.test.numerical.size())
+print(data.data_frame.train.categorical.size(), data.data_frame.train.numerical.size())
+print(data.data_frame.validation.categorical.size(), data.data_frame.validation.numerical.size())
+print(data.data_frame.test.categorical.size(), data.data_frame.test.numerical.size())
 
 # Initialise the Model
 

@@ -5,6 +5,12 @@ from scipy import stats
 from sklearn.metrics import r2_score
 from sklearn.linear_model import LinearRegression as sk_OLS
 from sklearn.feature_selection import RFECV
+from sklearn.neighbors import KNeighborsRegressor as sk_KNR
+from sklearn.tree import DecisionTreeRegressor as sk_DTR
+from sklearn.ensemble import ExtraTreesRegressor as sk_ETR, RandomForestRegressor as sk_RFR
+from sklearn.svm import SVR as sk_SVR
+from lightgbm import LGBMRegressor as li_LBR
+from xgboost import XGBRegressor as xg_XBR
 
 
 class AnyModel:
@@ -213,14 +219,14 @@ class LBR(ScikitLearnAPIModel):
 
     def __init__(self, data, params_space):
         params_current = {}
-        super().__init__(data=data, model=sk_LBR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, model=li_LBR, params_current=params_current, params_space=params_space)
 
 
 class XBR(ScikitLearnAPIModel):
 
     def __init__(self, data, params_space):
         params_current = {}
-        super().__init__(data=data, model=sk_XBR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, model=xg_XBR, params_current=params_current, params_space=params_space)
 
 
 class SVR(ScikitLearnAPIModel):
@@ -229,7 +235,7 @@ class SVR(ScikitLearnAPIModel):
 
     def __init__(self, data, params_space):
         params_current = {}
-        super().__init__(data=data, model=sk_LBR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, model=sk_SVR, params_current=params_current, params_space=params_space)
     # also coef_ status should be checked:
     # """
     # This is only available in the case of a linear kernel

@@ -52,11 +52,10 @@ class AnyModel:
         raise Exception("Not yet!")
 
 
-class OLS(AnyModel):
+class ScikitLearnAPIModel(AnyModel):
 
-    def __init__(self, data):
-        params_current = {'fit_intercept': False, 'n_jobs': -1}
-        super().__init__(data=data, model=sk_OLS, params_current=params_current, params_space=None)
+    def __init__(self, data, model, params_current, params_space):
+        super().__init__(data=data, model=model, params_current=params_current, params_space=params_space)
 
     def fit(self):
 
@@ -64,6 +63,51 @@ class OLS(AnyModel):
 
         self.model_ = self.model(**self.params_current)
         self.model_.fit(X_train, Y_train.ravel())
+
+    def _correlator(self, y, x):
+
+        model_ = self.model(**self.params_current)
+        model_.fit(x.reshape(-1, 1), y)
+        y_hat = model_.predict(x.reshape(-1, 1))
+        score = r2_score(y, y_hat)
+        return score
+
+    def correlation_matrix(self):
+
+        X, _ = self.data.values
+        names, _ = self.data.names
+        table = pandas.DataFrame(data=X, columns=names)
+        corr_table = table.corr(method=self._correlator)
+        return corr_table
+
+    def predict(self, dim0_mask=None):
+        if dim0_mask is None:
+            X, _ = self.data.values
+        else:
+            old_d0 = self.data.mask.d1
+            self.data.mask.d0 = dim0_mask
+            X, _ = self.data.values
+            self.data.mask.d0 = old_d0
+        predicted = self.model_.predict(X)
+        return predicted
+
+    def melt_coeff(self, min_left=1, step=1, cv=5):
+
+        X, Y = self.data.values
+        model_ = self.model(**self.params_current)
+        rfe = RFECV(model_, min_features_to_select=min_left, step=step, cv=cv)
+        rfe.fit(X, Y.ravel())
+        self.data.mask.d1 = rfe.support_
+        X, Y = self.data.values
+        self.model_ = self.model(**self.params_current)
+        self.model_.fit(X, Y)
+
+
+class OLS(ScikitLearnAPIModel):
+
+    def __init__(self, data):
+        params_current = {'fit_intercept': False, 'n_jobs': -1}
+        super().__init__(data=data, model=sk_OLS, params_current=params_current, params_space=None)
 
     def _summarize(self):
 
@@ -106,17 +150,6 @@ class OLS(AnyModel):
 
         return self._summarize()
 
-    def melt_coeff(self, min_left=1, step=1, cv=5):
-
-        X, Y = self.data.values
-        model_ = self.model(**self.params_current)
-        rfe = RFECV(model_, min_features_to_select=min_left, step=step, cv=cv)
-        rfe.fit(X, Y.ravel())
-        self.data.mask.d1 = rfe.support_
-        X, Y = self.data.values
-        self.model_ = self.model(**self.params_current)
-        self.model_.fit(X, Y)
-
     def _melt_significance_censor(self, significance):
 
         p_values = self._summarize()['Probabilities'].values[1:]
@@ -137,29 +170,70 @@ class OLS(AnyModel):
             mask = self.data.mask.d1
             done = mask.sum() == 0 or diff.all() == 1
 
-    def _correlator(self, y, x):
 
-        model_ = self.model(**self.params_current)
-        model_.fit(x.reshape(-1, 1), y)
-        y_hat = model_.predict(x.reshape(-1, 1))
-        score = r2_score(y, y_hat)
-        return score
+class KNR(ScikitLearnAPIModel):
 
-    def correlation_matrix(self):
+    def __init__(self, data, params_space):
+        params_current = {}
+        super().__init__(data=data, model=sk_KNR, params_current=params_current, params_space=params_space)
 
-        X, _ = self.data.values
-        names, _ = self.data.names
-        table = pandas.DataFrame(data=X, columns=names)
-        corr_table = table.corr(method=self._correlator)
-        return corr_table
+    def melt_coeff(self, min_left=1, step=1, cv=5):
+        raise Exception("Not yet!")
 
-    def predict(self, dim0_mask=None):
-        if dim0_mask is None:
-            X, _ = self.data.values
-        else:
-            old_d0 = self.data.mask.d1
-            self.data.mask.d0 = dim0_mask
-            X, _ = self.data.values
-            self.data.mask.d0 = old_d0
-        predicted = self.model_.predict(X)
-        return predicted
+
+class DTR(ScikitLearnAPIModel):
+
+    def __init__(self, data, params_space):
+        params_current = {}
+        super().__init__(data=data, model=sk_DTR, params_current=params_current, params_space=params_space)
+
+    def melt_coeff(self, min_left=1, step=1, cv=5):
+        raise Exception("Not yet!")
+
+    def plot_fit(self):
+        # here should be a pic of the tree
+        raise Exception("Not yet!")
+
+
+class ETR(ScikitLearnAPIModel):
+
+    def __init__(self, data, params_space):
+        params_current = {}
+        super().__init__(data=data, model=sk_ETR, params_current=params_current, params_space=params_space)
+
+
+class RFR(ScikitLearnAPIModel):
+
+    def __init__(self, data, params_space):
+        params_current = {}
+        super().__init__(data=data, model=sk_RFR, params_current=params_current, params_space=params_space)
+
+
+class LBR(ScikitLearnAPIModel):
+
+    def __init__(self, data, params_space):
+        params_current = {}
+        super().__init__(data=data, model=sk_LBR, params_current=params_current, params_space=params_space)
+
+
+class XBR(ScikitLearnAPIModel):
+
+    def __init__(self, data, params_space):
+        params_current = {}
+        super().__init__(data=data, model=sk_XBR, params_current=params_current, params_space=params_space)
+
+
+class SVR(ScikitLearnAPIModel):
+    # note: in future it shall select which model to use: linearsvr, svr, or nusvr depending on parameters passed to it
+    # but currently we simply use svr
+
+    def __init__(self, data, params_space):
+        params_current = {}
+        super().__init__(data=data, model=sk_LBR, params_current=params_current, params_space=params_space)
+    # also coef_ status should be checked:
+    # """
+    # This is only available in the case of a linear kernel
+    # """
+    # (from the official docs)
+
+

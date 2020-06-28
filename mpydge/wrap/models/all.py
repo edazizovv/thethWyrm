@@ -1,10 +1,13 @@
 #
+import json
 import numpy
 import pandas
 from scipy import stats
+from sklearn.base import BaseEstimator
 from sklearn.metrics import r2_score
-from sklearn.linear_model import LinearRegression as sk_OLS
+from sklearn.linear_model import LinearRegression as sk_OLR
 from sklearn.feature_selection import RFECV
+from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsRegressor as sk_KNR
 from sklearn.tree import DecisionTreeRegressor as sk_DTR
 from sklearn.ensemble import ExtraTreesRegressor as sk_ETR, RandomForestRegressor as sk_RFR
@@ -15,14 +18,24 @@ from xgboost import XGBRegressor as xg_XBR
 
 class AnyModel:
 
-    def __init__(self, data, model, params_current, params_space):
+    def __init__(self, data, name, model, params_current, params_space):
 
         self.data = data
 
+        self.name = name
         self.model = model
         self.model_ = None
         self.params_current = params_current
-        self.params_space = params_space
+        if params_space is None:
+            self.params_space = params_space
+        elif isinstance(params_space, str):
+            with open('./models_params.json') as f:
+                models_params = json.load(f)
+            self.params_space = models_params[self.name]
+        elif isinstance(params_space, dict):
+            self.params_space = params_space
+        else:
+            raise Exception("what is yours params space?")
 
     def fit(self):
         raise Exception("Not yet!")
@@ -58,10 +71,130 @@ class AnyModel:
         raise Exception("Not yet!")
 
 
+class rfe_KNR(sk_KNR):
+
+    def fit(self, X, Y):
+        params = self.get_params()
+        model = sk_KNR(**params)
+        self.rfe = RFECV(model)
+        self.rfe.fit(X, Y)
+
+    def predict(self, X):
+        return self.rfe.predict(X)
+
+    def score(self, X, Y):
+        return self.rfe.score(X, Y)
+
+
+class rfe_DTR(sk_DTR):
+
+    def fit(self, X, Y):
+        params = self.get_params()
+        model = sk_DTR(**params)
+        self.rfe = RFECV(model)
+        self.rfe.fit(X, Y)
+
+    def predict(self, X):
+        return self.rfe.predict(X)
+
+    def score(self, X, Y):
+        return self.rfe.score(X, Y)
+
+
+class rfe_ETR(sk_ETR):
+
+    def fit(self, X, Y):
+        params = self.get_params()
+        model = sk_ETR(**params)
+        self.rfe = RFECV(model)
+        self.rfe.fit(X, Y)
+
+    def predict(self, X):
+        return self.rfe.predict(X)
+
+    def score(self, X, Y):
+        return self.rfe.score(X, Y)
+
+
+class rfe_RFR(sk_RFR):
+
+    def fit(self, X, Y):
+        params = self.get_params()
+        model = sk_RFR(**params)
+        self.rfe = RFECV(model)
+        self.rfe.fit(X, Y)
+
+    def predict(self, X):
+        return self.rfe.predict(X)
+
+    def score(self, X, Y):
+        return self.rfe.score(X, Y)
+
+
+class rfe_LBR(li_LBR):
+
+    def fit(self, X, Y):
+        params = self.get_params()
+        model = li_LBR(**params)
+        self.rfe = RFECV(model)
+        self.rfe.fit(X, Y)
+
+    def predict(self, X):
+        return self.rfe.predict(X)
+
+    def score(self, X, Y):
+        return self.rfe.score(X, Y)
+
+
+class rfe_XBR(xg_XBR):
+
+    def fit(self, X, Y):
+        params = self.get_params()
+        model = xg_XBR(**params)
+        self.rfe = RFECV(model)
+        self.rfe.fit(X, Y)
+
+    def predict(self, X):
+        return self.rfe.predict(X)
+
+    def score(self, X, Y):
+        return self.rfe.score(X, Y)
+
+
+class rfe_OLR(sk_OLR):
+
+    def fit(self, X, Y):
+        params = self.get_params()
+        model = sk_OLR(**params)
+        self.rfe = RFECV(model)
+        self.rfe.fit(X, Y)
+
+    def predict(self, X):
+        return self.rfe.predict(X)
+
+    def score(self, X, Y):
+        return self.rfe.score(X, Y)
+
+
+class rfe_SVR(sk_SVR):
+
+    def fit(self, X, Y):
+        params = self.get_params()
+        model = sk_SVR(**params)
+        self.rfe = RFECV(model)
+        self.rfe.fit(X, Y)
+
+    def predict(self, X):
+        return self.rfe.predict(X)
+
+    def score(self, X, Y):
+        return self.rfe.score(X, Y)
+
+
 class ScikitLearnAPIModel(AnyModel):
 
-    def __init__(self, data, model, params_current, params_space):
-        super().__init__(data=data, model=model, params_current=params_current, params_space=params_space)
+    def __init__(self, data, name, model, params_current, params_space):
+        super().__init__(data=data, name=name, model=model, params_current=params_current, params_space=params_space)
 
     def fit(self):
 
@@ -109,11 +242,11 @@ class ScikitLearnAPIModel(AnyModel):
         self.model_.fit(X, Y)
 
 
-class OLS(ScikitLearnAPIModel):
+class OLR(ScikitLearnAPIModel):
 
     def __init__(self, data):
         params_current = {'fit_intercept': False, 'n_jobs': -1}
-        super().__init__(data=data, model=sk_OLS, params_current=params_current, params_space=None)
+        super().__init__(data=data, name='OLR', model=sk_OLR, params_current=params_current, params_space=None)
 
     def _summarize(self):
 
@@ -176,22 +309,60 @@ class OLS(ScikitLearnAPIModel):
             mask = self.data.mask.d1
             done = mask.sum() == 0 or diff.all() == 1
 
+    def hyper_opt(self, melt=None):
+        # add meltors!
+
+        if self.params_space is None:
+            raise Exception("your params_space is empty, idk what to search")
+        else:
+            if melt is None:
+                model_ = self.model()
+                params_space = self.params_space
+            elif melt == 'coeff':
+                model_ = rfe_OLR()
+                params_space = self.params_space
+            else:
+                raise Exception("Not yet!")
+            X, Y = self.data.values
+            gscv = GridSearchCV(model_, params_space)
+            gscv.fit(X, Y.ravel())
+            self.params_current = gscv.best_params_
+
 
 class KNR(ScikitLearnAPIModel):
 
     def __init__(self, data, params_space):
         params_current = {}
-        super().__init__(data=data, model=sk_KNR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, name='KNR', model=sk_KNR, params_current=params_current, params_space=params_space)
 
     def melt_coeff(self, min_left=1, step=1, cv=5):
         raise Exception("Not yet!")
+
+    def hyper_opt(self, melt=None):
+        # add meltors!
+
+        if self.params_space is None:
+            raise Exception("your params_space is empty, idk what to search")
+        else:
+            if melt is None:
+                model_ = self.model()
+                params_space = self.params_space
+            elif melt == 'coeff':
+                model_ = rfe_KNR()
+                params_space = self.params_space
+            else:
+                raise Exception("Not yet!")
+            X, Y = self.data.values
+            gscv = GridSearchCV(model_, params_space)
+            gscv.fit(X, Y.ravel())
+            self.params_current = gscv.best_params_
 
 
 class DTR(ScikitLearnAPIModel):
 
     def __init__(self, data, params_space):
         params_current = {}
-        super().__init__(data=data, model=sk_DTR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, name='DTR', model=sk_DTR, params_current=params_current, params_space=params_space)
 
     def melt_coeff(self, min_left=1, step=1, cv=5):
         raise Exception("Not yet!")
@@ -200,33 +371,128 @@ class DTR(ScikitLearnAPIModel):
         # here should be a pic of the tree
         raise Exception("Not yet!")
 
+    def hyper_opt(self, melt=None):
+        # add meltors!
+
+        if self.params_space is None:
+            raise Exception("your params_space is empty, idk what to search")
+        else:
+            if melt is None:
+                model_ = self.model()
+                params_space = self.params_space
+            elif melt == 'coeff':
+                model_ = rfe_DTR()
+                params_space = self.params_space
+            else:
+                raise Exception("Not yet!")
+            X, Y = self.data.values
+            gscv = GridSearchCV(model_, params_space)
+            gscv.fit(X, Y.ravel())
+            self.params_current = gscv.best_params_
+
 
 class ETR(ScikitLearnAPIModel):
 
     def __init__(self, data, params_space):
         params_current = {}
-        super().__init__(data=data, model=sk_ETR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, name='ETR', model=sk_ETR, params_current=params_current, params_space=params_space)
+
+    def hyper_opt(self, melt=None):
+        # add meltors!
+
+        if self.params_space is None:
+            raise Exception("your params_space is empty, idk what to search")
+        else:
+            if melt is None:
+                model_ = self.model()
+                params_space = self.params_space
+            elif melt == 'coeff':
+                model_ = rfe_ETR()
+                params_space = self.params_space
+            else:
+                raise Exception("Not yet!")
+            X, Y = self.data.values
+            gscv = GridSearchCV(model_, params_space)
+            gscv.fit(X, Y.ravel())
+            self.params_current = gscv.best_params_
 
 
 class RFR(ScikitLearnAPIModel):
 
     def __init__(self, data, params_space):
         params_current = {}
-        super().__init__(data=data, model=sk_RFR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, name='RFR', model=sk_RFR, params_current=params_current, params_space=params_space)
+
+    def hyper_opt(self, melt=None):
+        # add meltors!
+
+        if self.params_space is None:
+            raise Exception("your params_space is empty, idk what to search")
+        else:
+            if melt is None:
+                model_ = self.model()
+                params_space = self.params_space
+            elif melt == 'coeff':
+                model_ = rfe_RFR()
+                params_space = self.params_space
+            else:
+                raise Exception("Not yet!")
+            X, Y = self.data.values
+            gscv = GridSearchCV(model_, params_space)
+            gscv.fit(X, Y.ravel())
+            self.params_current = gscv.best_params_
 
 
 class LBR(ScikitLearnAPIModel):
 
     def __init__(self, data, params_space):
         params_current = {}
-        super().__init__(data=data, model=li_LBR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, name='LBR', model=li_LBR, params_current=params_current, params_space=params_space)
+
+    def hyper_opt(self, melt=None):
+        # add meltors!
+
+        if self.params_space is None:
+            raise Exception("your params_space is empty, idk what to search")
+        else:
+            if melt is None:
+                model_ = self.model()
+                params_space = self.params_space
+            elif melt == 'coeff':
+                model_ = rfe_LBR()
+                params_space = self.params_space
+            else:
+                raise Exception("Not yet!")
+            X, Y = self.data.values
+            gscv = GridSearchCV(model_, params_space)
+            gscv.fit(X, Y.ravel())
+            self.params_current = gscv.best_params_
 
 
 class XBR(ScikitLearnAPIModel):
 
     def __init__(self, data, params_space):
         params_current = {}
-        super().__init__(data=data, model=xg_XBR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, name='XBR', model=xg_XBR, params_current=params_current, params_space=params_space)
+
+    def hyper_opt(self, melt=None):
+        # add meltors!
+
+        if self.params_space is None:
+            raise Exception("your params_space is empty, idk what to search")
+        else:
+            if melt is None:
+                model_ = self.model()
+                params_space = self.params_space
+            elif melt == 'coeff':
+                model_ = rfe_XBR()
+                params_space = self.params_space
+            else:
+                raise Exception("Not yet!")
+            X, Y = self.data.values
+            gscv = GridSearchCV(model_, params_space)
+            gscv.fit(X, Y.ravel())
+            self.params_current = gscv.best_params_
 
 
 class SVR(ScikitLearnAPIModel):
@@ -235,11 +501,29 @@ class SVR(ScikitLearnAPIModel):
 
     def __init__(self, data, params_space):
         params_current = {}
-        super().__init__(data=data, model=sk_SVR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, name='SVR', model=sk_SVR, params_current=params_current, params_space=params_space)
     # also coef_ status should be checked:
     # """
     # This is only available in the case of a linear kernel
     # """
     # (from the official docs)
 
+    def hyper_opt(self, melt=None):
+        # add meltors!
+
+        if self.params_space is None:
+            raise Exception("your params_space is empty, idk what to search")
+        else:
+            if melt is None:
+                model_ = self.model()
+                params_space = self.params_space
+            elif melt == 'coeff':
+                model_ = rfe_SVR()
+                params_space = self.params_space
+            else:
+                raise Exception("Not yet!")
+            X, Y = self.data.values
+            gscv = GridSearchCV(model_, params_space)
+            gscv.fit(X, Y.ravel())
+            self.params_current = gscv.best_params_
 

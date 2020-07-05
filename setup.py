@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="mpydge",
-    version="0.1.0",
+    version="0.1.5",
     author="Edward Aziz",
     author_email="edazizovv@gmail.com",
     description="Models for PyDGE",

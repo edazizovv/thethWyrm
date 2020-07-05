@@ -1,9 +1,8 @@
 #
-import json
 import numpy
 import pandas
 from scipy import stats
-from sklearn.base import BaseEstimator
+from matplotlib import pyplot, lines as mlines
 from sklearn.metrics import r2_score
 from sklearn.linear_model import LinearRegression as sk_OLR
 from sklearn.feature_selection import RFECV
@@ -16,59 +15,83 @@ from lightgbm import LGBMRegressor as li_LBR
 from xgboost import XGBRegressor as xg_XBR
 
 
-class AnyModel:
+#
+from mpydge.wrap.models.core import AnyModel
 
-    def __init__(self, data, name, model, params_current, params_space):
 
-        self.data = data
+#
 
-        self.name = name
-        self.model = model
-        self.model_ = None
-        self.params_current = params_current
-        if params_space is None:
-            self.params_space = params_space
-        elif isinstance(params_space, str):
-            with open('./models_params.json') as f:
-                models_params = json.load(f)
-            self.params_space = models_params[self.name]
-        elif isinstance(params_space, dict):
-            self.params_space = params_space
+
+class RegressionModel(AnyModel):
+
+    def __init__(self, data, name, preprocessor, model, params_current, params_space):
+        super().__init__(data=data, name=name, preprocessor=preprocessor, model=model,
+                         params_current=params_current, params_space=params_space)
+
+    def ts_plot(self, train_dim0_mask=None, test_dim0_mask=None):
+
+        Y_hat_train = self.predict(train_dim0_mask)
+        if train_dim0_mask is None:
+            _, Y_train = self.data.values
         else:
-            raise Exception("what is yours params space?")
+            old_d0 = self.data.mask.d0
+            self.data.mask.d0 = train_dim0_mask
+            _, Y_train = self.data.values
+            self.data.mask.d0 = old_d0
 
-    def fit(self):
-        raise Exception("Not yet!")
+        Y_hat_test = self.predict(test_dim0_mask)
+        if test_dim0_mask is None:
+            _, Y_test = self.data.values
+        else:
+            old_d0 = self.data.mask.d0
+            self.data.mask.d0 = test_dim0_mask
+            _, Y_test = self.data.values
+            self.data.mask.d0 = old_d0
 
-    def plot_fit(self):
-        raise Exception("Not yet!")
+        err_train, err_test = Y_train - Y_hat_train, Y_test - Y_hat_test
 
-    def melt_coeff(self):
-        raise Exception("Not yet!")
+        fig, ax = pyplot.subplots(4, 2, figsize=(10, 10))
 
-    def melt_significance(self):
-        raise Exception("Not yet!")
+        x_train, x_test = numpy.array(numpy.arange(Y_train.shape[0])), numpy.array(numpy.arange(Y_test.shape[0]))
 
-    def melt_correlation(self):
-        raise Exception("Not yet!")
+        cum_train_true, cum_train_hat = numpy.cumprod(Y_train + 1), numpy.cumprod(Y_hat_train + 1)
+        cum_test_true, cum_test_hat = numpy.cumprod(Y_test + 1), numpy.cumprod(Y_hat_test + 1)
 
-    def correlation_matrix(self):
-        raise Exception("Not yet!")
+        ax[0, 0].plot(x_train, cum_train_true, 'navy', x_train, cum_train_hat, 'blueviolet')
+        true_train_line = mlines.Line2D([], [], color='navy', label='True Train')
+        hat_train_line = mlines.Line2D([], [], color='blueviolet', label='Estimated Train')
+        ax[0, 0].legend(handles=[true_train_line, hat_train_line])
 
-    def storm(self):
-        raise Exception("Not yet!")
+        ax[0, 1].plot(x_test, cum_test_true, 'navy', x_test, cum_test_hat, 'blueviolet')
+        true_test_line = mlines.Line2D([], [], color='navy', label='True Test')
+        hat_test_line = mlines.Line2D([], [], color='blueviolet', label='Estimated Test')
+        ax[0, 1].legend(handles=[true_test_line, hat_test_line])
 
-    def stabilize(self):
-        raise Exception("Not yet!")
+        ax[1, 0].hist(err_train, 50, density=True, facecolor='dodgerblue', alpha=0.5)
+        ax[1, 1].hist(err_test, 50, density=True, facecolor='aqua', alpha=0.5)
+        train_err_line = mlines.Line2D([], [], color='dodgerblue', label='Train Errors')
+        test_err_line = mlines.Line2D([], [], color='aqua', label='Test Errors')
+        ax[1, 0].legend(handles=[train_err_line])
+        ax[1, 1].legend(handles=[test_err_line])
 
-    def hyper_opt(self):
-        raise Exception("Not yet!")
+        train_err_epdf__y, train_err_epdf__x = numpy.histogram(err_train, bins=50, density=True)
+        train_err_ecdf__y, train_err_ecdf__x = numpy.cumsum(train_err_epdf__y), train_err_epdf__x[:-1]
+        train_err_ecdf__y = train_err_ecdf__y / numpy.max(train_err_ecdf__y)
+        test_err_epdf__y, test_err_epdf__x = numpy.histogram(err_test, bins=50, density=True)
+        test_err_ecdf__y, test_err_ecdf__x = numpy.cumsum(test_err_epdf__y), test_err_epdf__x[:-1]
+        test_err_ecdf__y = test_err_ecdf__y / numpy.max(test_err_ecdf__y)
 
-    def summarize(self):
-        raise Exception("Not yet!")
+        ax[2, 0].plot(train_err_epdf__x[1:], train_err_epdf__y, 'dodgerblue', test_err_epdf__x[1:], test_err_epdf__y, 'aqua')
+        train_err_line = mlines.Line2D([], [], color='dodgerblue', label='Train Errors')
+        test_err_line = mlines.Line2D([], [], color='aqua', label='Test Errors')
+        ax[2, 0].legend(handles=[train_err_line, test_err_line])
 
-    def predict(self, dim0_mask):
-        raise Exception("Not yet!")
+        ax[2, 1].plot(train_err_ecdf__x, train_err_ecdf__y, 'dodgerblue', test_err_ecdf__x, test_err_ecdf__y, 'aqua')
+        train_err_line = mlines.Line2D([], [], color='dodgerblue', label='Train Errors')
+        test_err_line = mlines.Line2D([], [], color='aqua', label='Test Errors')
+        ax[2, 1].legend(handles=[train_err_line, test_err_line])
+
+        # here goes qq plot (see the ts report from the article)
 
 
 class rfe_KNR(sk_KNR):
@@ -191,17 +214,24 @@ class rfe_SVR(sk_SVR):
         return self.rfe.score(X, Y)
 
 
-class ScikitLearnAPIModel(AnyModel):
+class ScikitLearnRegressionAPIModel(RegressionModel):
 
-    def __init__(self, data, name, model, params_current, params_space):
-        super().__init__(data=data, name=name, model=model, params_current=params_current, params_space=params_space)
+    def __init__(self, data, name, preprocessor, model, params_current, params_space):
+        super().__init__(data=data, name=name, preprocessor=preprocessor, model=model, params_current=params_current, params_space=params_space)
 
     def fit(self):
 
         X_train, Y_train = self.data.values
 
+        train = numpy.concatenate((X_train, Y_train), axis=1)
+
+        self.preprocessor_ = self.preprocessor()
+        self.preprocessor_.fit(train)
+        train_tf = self.preprocessor_.transform(train)
+        X_train_tf, Y_train_tf = train_tf[:, :-1], train_tf[:, -1]
+
         self.model_ = self.model(**self.params_current)
-        self.model_.fit(X_train, Y_train.ravel())
+        self.model_.fit(X_train_tf, Y_train_tf.ravel())
 
     def _correlator(self, y, x):
 
@@ -222,45 +252,68 @@ class ScikitLearnAPIModel(AnyModel):
     def predict(self, dim0_mask=None):
         if dim0_mask is None:
             X, _ = self.data.values
+            full = numpy.concatenate((X, _), axis=1)
+            full_tf = self.preprocessor_.transform(full)
+            X_tf, _tf = full_tf[:, :-1], full_tf[:, -1]
         else:
             old_d0 = self.data.mask.d1
             self.data.mask.d0 = dim0_mask
             X, _ = self.data.values
+            full = numpy.concatenate((X, _), axis=1)
+            full_tf = self.preprocessor_.transform(full)
+            X_tf, _tf = full_tf[:, :-1], full_tf[:, -1]
             self.data.mask.d0 = old_d0
-        predicted = self.model_.predict(X)
-        return predicted
+        predicted_tf = self.model_.predict(X_tf).reshape(-1, 1)
+        predicted_full_tf = numpy.concatenate((X_tf, predicted_tf), axis=1)
+        predicted_full = self.preprocessor_.inverse_transform(predicted_full_tf)
+        _, predicted = predicted_full[:, :-1], predicted_full[:, -1]
+        return predicted.ravel()
 
     def melt_coeff(self, min_left=1, step=1, cv=5):
-
         X, Y = self.data.values
+        full = numpy.concatenate((X, Y), axis=1)
+        full_tf = self.preprocessor_.transform(full)
+        X_tf, Y_tf = full_tf[:, :-1], full_tf[:, -1]
         model_ = self.model(**self.params_current)
         rfe = RFECV(model_, min_features_to_select=min_left, step=step, cv=cv)
-        rfe.fit(X, Y.ravel())
+        rfe.fit(X_tf, Y_tf.ravel())
         self.data.mask.d1 = rfe.support_
         X, Y = self.data.values
+        full = numpy.concatenate((X, Y), axis=1)
+        full_tf = self.preprocessor_.transform(full)
+        X_tf, Y_tf = full_tf[:, :-1], full_tf[:, -1]
         self.model_ = self.model(**self.params_current)
-        self.model_.fit(X, Y)
+        self.model_.fit(X_tf, Y_tf)
 
 
-class OLR(ScikitLearnAPIModel):
+class OLR(ScikitLearnRegressionAPIModel):
 
-    def __init__(self, data):
+    def __init__(self, data, preprocessor):
         params_current = {'fit_intercept': False, 'n_jobs': -1}
-        super().__init__(data=data, name='OLR', model=sk_OLR, params_current=params_current, params_space=None)
+        super().__init__(data=data, name='OLR', preprocessor=preprocessor, model=sk_OLR,
+                         params_current=params_current, params_space=None)
 
     def _summarize(self):
 
         # https://stackoverflow.com/questions/27928275/find-p-value-significance-in-scikit-learn-linearregression
 
         X, Y = self.data.values
-        Y = Y.ravel()
+        full = numpy.concatenate((X, Y), axis=1)
+        full_tf = self.preprocessor_.transform(full)
+        X_tf, Y_tf = full_tf[:, :-1], full_tf[:, -1]
+
+        Y_tf = Y_tf.ravel()
         names, _ = self.data.names
 
         params = numpy.append(self.model_.intercept_, self.model_.coef_)
-        predictions = self.model_.predict(X)
+        predictions_tf = self.model_.predict(X_tf).reshape(-1, 1)
+        predictions_full_tf = numpy.concatenate((X_tf, predictions_tf), axis=1)
+        predictions_full = self.preprocessor_.inverse_transform(predictions_full_tf)
+        _, predictions = predictions_full[:, :-1], predictions_full[:, -1]
+        predictions = predictions.ravel()
 
-        newX = pandas.DataFrame({"Constant": numpy.ones(len(X))}).join(pandas.DataFrame(X))
-        MSE = (sum((Y - predictions) ** 2)) / (len(newX) - len(newX.columns))
+        newX = pandas.DataFrame({"Constant": numpy.ones(len(X_tf))}).join(pandas.DataFrame(X_tf))
+        MSE = (sum((Y_tf - predictions) ** 2)) / (len(newX) - len(newX.columns))
 
         # Note if you don't want to use a DataFrame replace the two lines above with
         # newX = np.append(np.ones((len(X),1)), X, axis=1)
@@ -302,8 +355,12 @@ class OLR(ScikitLearnAPIModel):
         while not done:
 
             XX, YY = self.data.values
+            full = numpy.concatenate((XX, YY), axis=1)
+            full_tf = self.preprocessor_.transform(full)
+            XX_tf, YY_tf = full_tf[:, :-1], full_tf[:, -1]
+
             self.model_ = self.model(**self.params_current)
-            self.model_.fit(XX, YY.ravel())
+            self.model_.fit(XX_tf, YY_tf.ravel())
 
             diff = self._melt_significance_censor(significance)
             mask = self.data.mask.d1
@@ -324,16 +381,19 @@ class OLR(ScikitLearnAPIModel):
             else:
                 raise Exception("Not yet!")
             X, Y = self.data.values
+            full = numpy.concatenate((X, Y), axis=1)
+            full_tf = self.preprocessor_.transform(full)
+            X_tf, Y_tf = full_tf[:, :-1], full_tf[:, -1]
             gscv = GridSearchCV(model_, params_space)
-            gscv.fit(X, Y.ravel())
+            gscv.fit(X_tf, Y_tf.ravel())
             self.params_current = gscv.best_params_
 
 
-class KNR(ScikitLearnAPIModel):
+class KNR(ScikitLearnRegressionAPIModel):
 
-    def __init__(self, data, params_space):
+    def __init__(self, data, preprocessor, params_space):
         params_current = {}
-        super().__init__(data=data, name='KNR', model=sk_KNR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, name='KNR', preprocessor=preprocessor, model=sk_KNR, params_current=params_current, params_space=params_space)
 
     def melt_coeff(self, min_left=1, step=1, cv=5):
         raise Exception("Not yet!")
@@ -353,16 +413,19 @@ class KNR(ScikitLearnAPIModel):
             else:
                 raise Exception("Not yet!")
             X, Y = self.data.values
+            full = numpy.concatenate((X, Y), axis=1)
+            full_tf = self.preprocessor_.transform(full)
+            X_tf, Y_tf = full_tf[:, :-1], full_tf[:, -1]
             gscv = GridSearchCV(model_, params_space)
-            gscv.fit(X, Y.ravel())
+            gscv.fit(X_tf, Y_tf.ravel())
             self.params_current = gscv.best_params_
 
 
-class DTR(ScikitLearnAPIModel):
+class DTR(ScikitLearnRegressionAPIModel):
 
-    def __init__(self, data, params_space):
+    def __init__(self, data, preprocessor, params_space):
         params_current = {}
-        super().__init__(data=data, name='DTR', model=sk_DTR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, name='DTR', preprocessor=preprocessor, model=sk_DTR, params_current=params_current, params_space=params_space)
 
     def melt_coeff(self, min_left=1, step=1, cv=5):
         raise Exception("Not yet!")
@@ -386,16 +449,19 @@ class DTR(ScikitLearnAPIModel):
             else:
                 raise Exception("Not yet!")
             X, Y = self.data.values
+            full = numpy.concatenate((X, Y), axis=1)
+            full_tf = self.preprocessor_.transform(full)
+            X_tf, Y_tf = full_tf[:, :-1], full_tf[:, -1]
             gscv = GridSearchCV(model_, params_space)
-            gscv.fit(X, Y.ravel())
+            gscv.fit(X_tf, Y_tf.ravel())
             self.params_current = gscv.best_params_
 
 
-class ETR(ScikitLearnAPIModel):
+class ETR(ScikitLearnRegressionAPIModel):
 
-    def __init__(self, data, params_space):
+    def __init__(self, data, preprocessor, params_space):
         params_current = {}
-        super().__init__(data=data, name='ETR', model=sk_ETR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, name='ETR', preprocessor=preprocessor, model=sk_ETR, params_current=params_current, params_space=params_space)
 
     def hyper_opt(self, melt=None):
         # add meltors!
@@ -412,16 +478,19 @@ class ETR(ScikitLearnAPIModel):
             else:
                 raise Exception("Not yet!")
             X, Y = self.data.values
+            full = numpy.concatenate((X, Y), axis=1)
+            full_tf = self.preprocessor_.transform(full)
+            X_tf, Y_tf = full_tf[:, :-1], full_tf[:, -1]
             gscv = GridSearchCV(model_, params_space)
-            gscv.fit(X, Y.ravel())
+            gscv.fit(X_tf, Y_tf.ravel())
             self.params_current = gscv.best_params_
 
 
-class RFR(ScikitLearnAPIModel):
+class RFR(ScikitLearnRegressionAPIModel):
 
-    def __init__(self, data, params_space):
+    def __init__(self, data, preprocessor, params_space):
         params_current = {}
-        super().__init__(data=data, name='RFR', model=sk_RFR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, name='RFR', preprocessor=preprocessor, model=sk_RFR, params_current=params_current, params_space=params_space)
 
     def hyper_opt(self, melt=None):
         # add meltors!
@@ -438,16 +507,19 @@ class RFR(ScikitLearnAPIModel):
             else:
                 raise Exception("Not yet!")
             X, Y = self.data.values
+            full = numpy.concatenate((X, Y), axis=1)
+            full_tf = self.preprocessor_.transform(full)
+            X_tf, Y_tf = full_tf[:, :-1], full_tf[:, -1]
             gscv = GridSearchCV(model_, params_space)
-            gscv.fit(X, Y.ravel())
+            gscv.fit(X_tf, Y_tf.ravel())
             self.params_current = gscv.best_params_
 
 
-class LBR(ScikitLearnAPIModel):
+class LBR(ScikitLearnRegressionAPIModel):
 
-    def __init__(self, data, params_space):
+    def __init__(self, data, preprocessor, params_space):
         params_current = {}
-        super().__init__(data=data, name='LBR', model=li_LBR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, name='LBR', preprocessor=preprocessor, model=li_LBR, params_current=params_current, params_space=params_space)
 
     def hyper_opt(self, melt=None):
         # add meltors!
@@ -464,16 +536,19 @@ class LBR(ScikitLearnAPIModel):
             else:
                 raise Exception("Not yet!")
             X, Y = self.data.values
+            full = numpy.concatenate((X, Y), axis=1)
+            full_tf = self.preprocessor_.transform(full)
+            X_tf, Y_tf = full_tf[:, :-1], full_tf[:, -1]
             gscv = GridSearchCV(model_, params_space)
-            gscv.fit(X, Y.ravel())
+            gscv.fit(X_tf, Y_tf.ravel())
             self.params_current = gscv.best_params_
 
 
-class XBR(ScikitLearnAPIModel):
+class XBR(ScikitLearnRegressionAPIModel):
 
-    def __init__(self, data, params_space):
+    def __init__(self, data, preprocessor, params_space):
         params_current = {}
-        super().__init__(data=data, name='XBR', model=xg_XBR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, name='XBR', preprocessor=preprocessor, model=xg_XBR, params_current=params_current, params_space=params_space)
 
     def hyper_opt(self, melt=None):
         # add meltors!
@@ -490,18 +565,21 @@ class XBR(ScikitLearnAPIModel):
             else:
                 raise Exception("Not yet!")
             X, Y = self.data.values
+            full = numpy.concatenate((X, Y), axis=1)
+            full_tf = self.preprocessor_.transform(full)
+            X_tf, Y_tf = full_tf[:, :-1], full_tf[:, -1]
             gscv = GridSearchCV(model_, params_space)
-            gscv.fit(X, Y.ravel())
+            gscv.fit(X_tf, Y_tf.ravel())
             self.params_current = gscv.best_params_
 
 
-class SVR(ScikitLearnAPIModel):
+class SVR(ScikitLearnRegressionAPIModel):
     # note: in future it shall select which model to use: linearsvr, svr, or nusvr depending on parameters passed to it
     # but currently we simply use svr
 
-    def __init__(self, data, params_space):
+    def __init__(self, data, preprocessor, params_space):
         params_current = {}
-        super().__init__(data=data, name='SVR', model=sk_SVR, params_current=params_current, params_space=params_space)
+        super().__init__(data=data, name='SVR', preprocessor=preprocessor, model=sk_SVR, params_current=params_current, params_space=params_space)
     # also coef_ status should be checked:
     # """
     # This is only available in the case of a linear kernel
@@ -523,7 +601,10 @@ class SVR(ScikitLearnAPIModel):
             else:
                 raise Exception("Not yet!")
             X, Y = self.data.values
+            full = numpy.concatenate((X, Y), axis=1)
+            full_tf = self.preprocessor_.transform(full)
+            X_tf, Y_tf = full_tf[:, :-1], full_tf[:, -1]
             gscv = GridSearchCV(model_, params_space)
-            gscv.fit(X, Y.ravel())
+            gscv.fit(X_tf, Y_tf.ravel())
             self.params_current = gscv.best_params_
 

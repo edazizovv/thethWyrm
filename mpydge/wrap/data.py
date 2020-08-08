@@ -45,7 +45,8 @@ class DataHandler:
             if mask[0] is None:
                 mask[0] = [True] * self.data_frame.shape[0]
             if mask[1] is None:
-                mask[1] = numpy.array([True] * self.data_frame.shape[1])
+                # mask[1] = numpy.array([True] * self.data_frame.shape[1])
+                mask[1] = numpy.array([x != self.target for x in self.data_frame.columns.values])
             d0, d1 = numpy.array(mask[0]), numpy.array(mask[1])
             self._mask = DataMask(d0=d0, d1=d1)
         else:

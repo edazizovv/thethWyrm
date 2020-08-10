@@ -49,11 +49,15 @@ class DataHandler:
         for numeric in self.quantitative:
             self.data_frame[numeric] = self.data_frame[numeric].astype('float64')
 
-        """
         self.train = None
         self.validation = None
         self.test = None
-        """
+
+    def copy(self):
+        copy = DataHandler(data_frame=self.data_frame.copy(),
+                           qualitative=self.qualitative, quantitative=self.quantitative, sample_mask=self.sample_mask)
+        copy.sample()
+        return copy
 
     def update_factors(self, new_factors):
         for factor_name in new_factors.keys():
@@ -77,14 +81,30 @@ class DataHandler:
                     self.quantitative.append(factor_name)
                 else:
                     raise Exception("Unacceptable factor type")
+        # self.sample()
 
     def sample(self):
-        raise Exception("Not realized yet")
+        if self.sample_mask is not None:
+            if self.sample_mask.train is not None:
+                self.train = self._result(self.sample_mask.train)
+            else:
+                print('train sample occurs to be None')
+            if self.sample_mask.validation is not None:
+                self.validation = self._result(self.sample_mask.validation)
+            else:
+                print('validation sample occurs to be None')
+            if self.sample_mask.test is not None:
+                self.test = self._result(self.sample_mask.test)
+            else:
+                print('test sample occurs to be None')
+        else:
+            raise Exception("Not realized yet")
 
     @property
     def factors(self):
         return self.qualitative + self.quantitative
 
+    """
     @property
     def train(self):
         return self._result(self.sample_mask.train)
@@ -96,9 +116,10 @@ class DataHandler:
     @property
     def test(self):
         return self._result(self.sample_mask.test)
-
+    """
     def _result(self, mask):
-        return pandas.DataFrame(self.data_frame.loc[:, mask])
+        return pandas.DataFrame(self.data_frame.loc[mask, :])
+
 
     """
     def _result(self, mask):

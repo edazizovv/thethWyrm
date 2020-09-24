@@ -1,5 +1,4 @@
 #
-import numpy
 import pandas
 
 
@@ -36,38 +35,9 @@ class MaskHandler:
         self.test = test
 
 
-class MaskyConfig:
-
-    def __init__(self, data_len, sweet_couple_rate, bucket_rate, step):
-        self.data_len = data_len
-        self.sweet_couple_rate = sweet_couple_rate
-        self.bucket_rate = bucket_rate
-        self.step = step
-
-        self._current_step = 0
-        self._identified = 0
-        self._bucket_size = int(self.data_len * self.bucket_rate)
-        self._train_size = int(self._bucket_size * self.sweet_couple_rate)
-        self._test_size = self._bucket_size - self._train_size
-
-    def tick(self):
-        train_mask = numpy.array([self._current_step <= x <= self._current_step + self._train_size for x in range(self.data_len)])
-        test_mask = numpy.array([self._current_step + self._train_size <= x <= self._current_step + self._bucket_size for x in range(self.data_len)])
-        if self.step + self._bucket_size >= self.data_len:
-            self._identified += 1
-            self.step = 0
-        else:
-            self.step += self._bucket_size
-        mask = MaskHandler(train=train_mask, validation=None, test=test_mask)
-        return mask, self._identified
-
-
 class DataHandler:
 
     def __init__(self, data_frame, qualitative, quantitative, sample_mask=None):
-
-        self.masky = None
-        self._masky_id = 0
 
         self.data_frame = data_frame
         self.sample_mask = sample_mask
@@ -150,11 +120,10 @@ class DataHandler:
     def _result(self, mask):
         return pandas.DataFrame(self.data_frame.loc[mask, :])
 
-    def masky_set(self, sweet_couple_rate, bucket_rate, step):
-        self.masky = MaskyConfig(self.data_frame.shape[0], sweet_couple_rate, bucket_rate, step)
 
-    def masky_tick(self):
-        self.sample_mask, _id = self.masky.tick()
-        if self._masky_id == _id:
-            self.sample()
-        return _id
+    """
+    def _result(self, mask):
+        data_frame = pandas.DataFrame(self.data_frame.loc[:, mask])
+        return DataPrimitive(data_frame=data_frame,
+                             qualitative=self.qualitative, quantitative=self.quantitative)
+    """

@@ -31,7 +31,7 @@ class SimplePipe:
         for j in range(len(self.items)):
 
             if self.X_names[j] is None:
-                self.X_names[j] = blade_runner.train.columns.values
+                self.X_names[j] = [x for x in blade_runner.train.columns.values if x not in self.output_names(j)]
             if self.Y_names[j] is None:
                 # self.Y_names[j] = blade_runner.train.columns.values[0]
                 raise Exception("Y_names anyway should be specified as non-None value, set something pls")
@@ -51,9 +51,8 @@ class SimplePipe:
             if self.output_spec[j] is None:
                 cols = numpy.array(self.X_names[j])[self.the_pipe[j].support_].tolist()
                 self.output_spec[j] = {x: blade_runner.train[x].dtype.name for x in cols}
-
             blade_runner.train[self.output_names(j)] = self.the_pipe[j].predict(blade_runner.train[self.X_names[j]].values)
-            blade_runner.update_factors(self.output_spec[j])
+            # blade_runner.update_factors(self.output_spec[j])
 
     def infer(self, on='train'):
 
@@ -62,25 +61,25 @@ class SimplePipe:
 
             for j in range(len(self.items)):
                 blade_runner.train[self.output_names(j)] = self.the_pipe[j].predict(blade_runner.train[self.X_names[j]].values)
-                blade_runner.update_factors(self.output_spec[j])
+                # blade_runner.update_factors(self.output_spec[j])
         elif on == 'validation':
             blade_runner = self.data.copy()
 
             for j in range(len(self.items)):
                 blade_runner.validation[self.output_names(j)] = self.the_pipe[j].predict(blade_runner.validation[self.X_names[j]].values)
-                blade_runner.update_factors(self.output_spec[j])
+                # blade_runner.update_factors(self.output_spec[j])
         elif on == 'test':
             blade_runner = self.data.copy()
 
             for j in range(len(self.items)):
                 blade_runner.test[self.output_names(j)] = self.the_pipe[j].predict(blade_runner.test[self.X_names[j]].values)
-                blade_runner.update_factors(self.output_spec[j])
+                # blade_runner.update_factors(self.output_spec[j])
         else:
             raise Exception("Unacceptable data subset")
 
         return blade_runner
 
-    def distorted_infer(self, invertor, diagnozer, juxtapozer):
+    def _distorted_infer(self, invertor, diagnozer, juxtapozer):
         _id = self.data.masky_tick()
         _data = self.data.copy()
         while _id == 0:
@@ -89,7 +88,7 @@ class SimplePipe:
 
             for j in range(len(self.items)):
                 blade_runner.train[self.output_names[j]] = self.the_pipe[j].predict(blade_runner.train[self.X_names[j]].values)
-                blade_runner.update_factors(self.output_spec[j])
+                # blade_runner.update_factors(self.output_spec[j])
 
             y_true, y_hat = invertor(self.data, blade_runner)
             diagnozer.fix(y_true, y_hat)

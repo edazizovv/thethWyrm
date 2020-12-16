@@ -30,8 +30,13 @@ class SimplePipe:
 
         for j in range(len(self.items)):
 
-            if self.X_names[j] is None:
-                self.X_names[j] = [x for x in blade_runner.train.columns.values if x not in self.output_names(j)]
+            # if self.X_names[j] is None:
+            #     self.X_names[j] = [x for x in blade_runner.train.columns.values if x not in self.output_names(j)]
+            if isinstance(self.X_names[j], int):
+                if self.X_names[j] == 0:
+                    self.X_names[j] = [x for x in blade_runner.train.columns.values if x not in self.output_names(j)]
+                else:
+                    self.X_names[j] = list(self.output_spec[(j + self.X_names[j])].keys())
             if self.Y_names[j] is None:
                 # self.Y_names[j] = blade_runner.train.columns.values[0]
                 raise Exception("Y_names anyway should be specified as non-None value, set something pls")

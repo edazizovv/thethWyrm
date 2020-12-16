@@ -104,6 +104,8 @@ class DataHandler:
                 else:
                     raise Exception("Unacceptable factor type")
             else:
+                print(factor_name in self.data_frame.columns.values)
+                print(self.data_frame.columns.values)
                 self.data_frame[factor_name] = self.data_frame[factor_name].astype(new_factors[factor_name])
                 if new_factors[factor_name] == 'category':
                     self.qualitative.append(factor_name)

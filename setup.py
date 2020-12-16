@@ -4,7 +4,7 @@ import setuptools
 
 setuptools.setup(
     name="mpydge",
-    version="0.1.8.0",
+    version="0.1.8.1",
     author="Edward Azizov",
     author_email="edazizovv@gmail.com",
     description="Models for PyDGE",

@@ -3,66 +3,87 @@ import numpy
 
 
 #
-from mpydge.wrap.data import DataHandler
 
 
 #
 class SimplePipe:
 
-    def __init__(self, data_frame, train_d0_mask, val_d0_mask, test_d0_mask,
-                 qualitative, quantitative,
-                 items, items_args, X_names, Y_names, output_names):
+    def __init__(self, data, items, items_args, X_names, Y_names, output_spec, verbose=False):
 
-        self.data_frame = data_frame
-
-        self.train_d0_mask = train_d0_mask
-        self.val_d0_mask = val_d0_mask
-        self.test_d0_mask = test_d0_mask
-
-        self.qualitative = qualitative
-        self.quantitative = quantitative
+        self.data = data
 
         self.items = items
         self.items_args = items_args
+
         self.X_names = X_names
         self.Y_names = Y_names
-        self.output_names = output_names
+        self.output_spec = output_spec
 
-        self.pipe = []
+        self.the_pipe = []
 
-    def go_fit(self):
-        data_frame = self.data_frame.copy()
-        for j in numpy.arange(start=0, step=1, stop=len(self.items)):
-            columns = [x for x in self.X_names[j] if x in data_frame.columns.values]
-            if self.Y_names[j] in data_frame.columns.values:
-                columns = columns + [self.Y_names[j]]
-            data_frame_ = data_frame[columns]
-            quantitative_ = [z for z in columns if z in self.quantitative]
-            qualitative_ = [z for z in columns if z in self.qualitative]
-            data = DataHandler(data_frame=data_frame_, target=self.Y_names[j],
-                               quantitative=quantitative_, qualitative=qualitative_)
-            data.mask = [self.train_d0_mask, None]
-            self.pipe.append(self.items[j](data, **self.items_args[j]))
-            self.pipe[j].fit()
-            data_frame.loc[self.train_d0_mask, self.output_names[j]] = self.pipe[j].predict()
+        self.verbose = verbose
 
-    def go_show(self, which):
+    def output_names(self, j):
+        return list(self.output_spec[j].keys())
 
-        if which == 'train':
-            target_mask = self.train_d0_mask
-        elif which == 'val' or which == 'validation':
-            target_mask = self.val_d0_mask
-        elif which == 'test':
-            target_mask = self.test_d0_mask
+    def fit(self):
+
+        blade_runner = self.data.copy()
+
+        for j in range(len(self.items)):
+
+            if isinstance(self.X_names[j], int):
+                if self.X_names[j] == 0:
+                    self.X_names[j] = [x for x in blade_runner.train.columns.values if x not in self.output_names(j)]
+                else:
+                    self.X_names[j] = list(self.output_spec[(j + self.X_names[j])].keys())
+            if self.Y_names[j] is None:
+                raise Exception("Y_names anyway should be specified as non-None value, set something pls")
+
+            self.the_pipe.append(self.items[j](**self.items_args[j]))
+
+            if self.verbose:
+                print(self.the_pipe[j])
+
+            self.the_pipe[j].fit(blade_runner.train[self.X_names[j]].values, blade_runner.train[self.Y_names[j]].values)
+
+            if self.output_spec[j] is None:
+                cols = numpy.array(self.X_names[j])[self.the_pipe[j].support_].tolist()
+                self.output_spec[j] = {x: blade_runner.train[x].dtype.name for x in cols}
+            blade_runner.train[self.output_names(j)] = self.the_pipe[j].predict(blade_runner.train[self.X_names[j]].values)
+
+    def infer(self, on='train'):
+
+        if on == 'train':
+            blade_runner = self.data.copy()
+
+            for j in range(len(self.items)):
+                blade_runner.train[self.output_names(j)] = self.the_pipe[j].predict(blade_runner.train[self.X_names[j]].values)
+
+        elif on == 'test':
+            blade_runner = self.data.copy()
+
+            for j in range(len(self.items)):
+                blade_runner.test[self.output_names(j)] = self.the_pipe[j].predict(blade_runner.test[self.X_names[j]].values)
+
         else:
-            raise Exception("idk what mask did you mean")
+            raise Exception("Unacceptable data subset")
 
-        data_frame = self.data_frame.copy()
-        for j in numpy.arange(start=0, step=1, stop=len(self.items)):
-            data_frame.loc[target_mask, self.output_names[j]] = self.pipe[j].predict(dim0_mask=target_mask)
+        return blade_runner
 
-        return data_frame.loc[target_mask, :]
+    def inverse(self):
+        raise Exception("Not realized yet")
 
-    def say_hello_to_daddy(self):
-        print('{0}: Oh, hello, okay?'.format(self))
-
+    def assess(self, assessor, on, target, where='inner'):
+        if where == 'inner':
+            if on == 'train':
+                bench = self.data.train[target]
+                peppa = self.infer(on=on).train[target]
+            else:
+                bench = self.data.test[target]
+                peppa = self.infer(on=on).test[target]
+            return assessor(y_true=bench.values, y_hat=peppa.values)
+        elif where == 'outer':
+            raise Exception("Not realised")
+        else:
+            raise Exception("Unacceptable plane")

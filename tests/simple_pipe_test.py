@@ -9,7 +9,9 @@ from sklearn.metrics import r2_score
 #
 from mpydge.chaotic.data import DataHandler
 from mpydge.chaotic.the_pipe import SimplePipe
-from new_insane import PCA, XBR, ZerosReductor
+from mpydge.wrap.models.reg import XBR
+# from new_insane import PCA, XBR, ZerosReductor
+from new_insane import PCA, ZerosReductor
 from sell_stone import NoRazor
 
 
@@ -29,7 +31,7 @@ def r2(y_true, y_hat):
 #
 data = load_dataset(name='diamonds')
 
-model_kwargs = {'rfe_cv': False, 'grid_cv': None}
+model_kwargs = {'rfe_enabled': False, 'grid_cv': None}
 
 embedding_len = 2
 embedder_names = ['EMB_{0}'.format(j) for j in range(embedding_len)]

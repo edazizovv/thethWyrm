@@ -1,97 +1,86 @@
 #
-import json
-from scipy import stats
-from statsmodels.tsa.stattools import adfuller
-from sklearn.metrics import r2_score, mean_absolute_error
-
-#
-from m_utils.measures import r2_adj
 
 
 #
+import numpy
+import pandas
+from sklearn.model_selection import GridSearchCV
+from sklearn.feature_selection import RFECV
 
 
-class AnyModel:
+#
 
-    def __init__(self, data, name, preprocessor, model, params_current, params_space):
 
-        self.data = data
+#
+class SupModel:
 
-        self.name = name
-        self.preprocessor = preprocessor
-        self.preprocessor_ = None
-        self.model = model
-        self.model_ = None
-        self.params_current = params_current
-        if params_space is None:
-            self.params_space = params_space
-        elif isinstance(params_space, str):
-            with open('./models_params.json') as f:
-                models_params = json.load(f)
-            self.params_space = models_params[self.name]
-        elif isinstance(params_space, dict):
-            self.params_space = params_space
+    def _fit(self, X, y):
+        raise Exception("Not realized")
+
+    def _predict(self, X):
+        raise Exception("Not realized")
+
+    def fit(self, X, y):
+        return self._fit(X=X, y=y)
+
+    def predict(self, X):
+        return self._predict(X=X)
+
+
+class SupM1D(SupModel):
+
+    def fit(self, X, y):
+        return self._fit(X=X, y=y.reshape(-1, 1))
+
+    def predict(self, X):
+        return self._predict(X=X).reshape(-1, 1)
+
+
+class SupM1DScikit(SupM1D):
+
+    def __init__(self, _model, rfe_enabled=False, grid_cv=None, *args, **kwargs):
+        self.rfe = None
+        self.rfe_enabled = rfe_enabled
+        self.grid = None
+        self.grid_cv = grid_cv
+        self._model = _model
+        self.model = self._model(*args, **kwargs)
+
+    def _fit(self, X, y):
+
+        Z = numpy.concatenate([X, y], axis=1)
+        Z = numpy.array(Z, dtype=numpy.float32)
+        Z[Z == numpy.inf] = numpy.nan
+        Z[Z == -numpy.inf] = numpy.nan
+        X_, y_ = X[~pandas.isna(Z).any(axis=1), :], y[~pandas.isna(Z).any(axis=1)]
+        if Z.shape[0] != X.shape[0]:
+            print('FIT: the sample contains NaNs, they were dropped\tN of dropped NaNs: {0}'.format(X.shape[0] - X_.shape[0]))
+
+        if self.grid_cv is not None:
+            self.grid = GridSearchCV(estimator=self.model, param_grid=self.grid_cv)
+            self.grid.fit(X_, y_)
+            self.model = self._model(**self.grid.best_params_)
+            if self.rfe_enabled:
+                self.rfe = RFECV(self.model)
+                self.rfe.fit(X_, y_)
+        elif self.rfe_enabled:
+            self.rfe = RFECV(self.model)
+            self.rfe.fit(X_, y_)
         else:
-            raise Exception("what is yours params space?")
+            self.model.fit(X_, y_)
 
-    def fit(self):
-        raise Exception("Not yet!")
-
-    def plot_fit(self):
-        raise Exception("Not yet!")
-
-    def melt_coeff(self):
-        raise Exception("Not yet!")
-
-    def melt_significance(self):
-        raise Exception("Not yet!")
-
-    def melt_correlation(self):
-        raise Exception("Not yet!")
-
-    def correlation_matrix(self):
-        raise Exception("Not yet!")
-
-    def storm(self):
-        raise Exception("Not yet!")
-
-    def stabilize(self):
-        raise Exception("Not yet!")
-
-    def hyper_opt(self):
-        raise Exception("Not yet!")
-
-    def summarize(self):
-        raise Exception("Not yet!")
-
-    def predict(self, dim0_mask):
-        raise Exception("Not yet!")
-
-    def score(self, measure, dim0_mask=None, ts_report=False):
-        Y_hat = self.predict(dim0_mask)
-        if dim0_mask is None:
-            X, Y = self.data.values
+    def _predict(self, X):
+        Z = numpy.concatenate([X], axis=1)
+        Z = numpy.array(Z, dtype=numpy.float32)
+        Z[Z == numpy.inf] = numpy.nan
+        Z[Z == -numpy.inf] = numpy.nan
+        nan_mask = ~pandas.isna(Z).any(axis=1)
+        X_ = X[nan_mask, :]
+        if Z.shape[0] != X.shape[0]:
+            print('PREDICT: the sample contains NaNs, they were dropped\tN of dropped NaNs: {0}'.format(X.shape[0] - X_.shape[0]))
+        Z = numpy.full(shape=(X.shape[0], 1), fill_value=numpy.nan, dtype=numpy.float64)
+        if self.rfe_enabled:
+            Z[nan_mask, :] = self.rfe.predict(X_).reshape(-1, 1)
         else:
-            old_d0 = self.data.mask.d0
-            self.data.mask.d0 = dim0_mask
-            X, Y = self.data.values
-            self.data.mask.d0 = old_d0
-        if measure == 'r2_adj':
-            measured = r2_adj(Y, Y_hat, X.shape[0], X.shape[1])
-        elif measure == 'mae':
-            measured = mean_absolute_error(Y, Y_hat)
-        elif measure == 'r2':
-            measured = r2_score(Y, Y_hat)
-        else:
-            raise Exception("Not yet!")
-        if ts_report:
-            errors = Y.ravel() - Y_hat
-            stationarity_score = adfuller(errors, regression='nc')[1]
-            skewness = stats.skew(errors)
-            return measured, stationarity_score, skewness
-        else:
-            return measured
-
-    def ts_plot(self, train_dim0_mask=None, test_dim0_mask=None):
-        raise Exception("Not yet!")
-
+            Z[nan_mask, :] = self.model.predict(X_).reshape(-1, 1)
+        return Z

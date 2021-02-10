@@ -775,6 +775,10 @@ class PCA:
         self.rfe_cv = rfe_cv
         self.model = PCA_(*args, **kwargs)
 
+    @property
+    def __bleed__(self):
+        return False
+
     def fit(self, X, y):
         Z = numpy.concatenate([X, y.reshape(-1, 1)], axis=1)
         Z = numpy.array(Z, dtype=numpy.float32)
@@ -1254,6 +1258,10 @@ class ZerosReductor:
 
     def __init__(self):
         self.support_ = None
+
+    @property
+    def __bleed__(self):
+        return False
 
     def fit(self, X, Y):
         self.support_ = numpy.array([~(X[:, j] == 0).all() for j in range(X.shape[1])])

@@ -16,6 +16,10 @@ class NoRazor:
         pass
 
     @property
+    def __bleed__(self):
+        return False
+
+    @property
     def support_(self):
         return self.supp_
 

@@ -26,6 +26,10 @@ class SupModel:
     def predict(self, X):
         return self._predict(X=X)
 
+    @property
+    def __bleed__(self):
+        return False
+
 
 class SupM1D(SupModel):
 

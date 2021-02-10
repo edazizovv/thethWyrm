@@ -32,6 +32,8 @@ class SimplePipe:
 
         for j in range(len(self.items)):
 
+            # determine names
+
             if isinstance(self.X_names[j], int):
                 if self.X_names[j] == 0:
                     self.X_names[j] = [x for x in blade_runner.train.columns.values if x not in self.output_names(j)]
@@ -40,17 +42,32 @@ class SimplePipe:
             if self.Y_names[j] is None:
                 raise Exception("Y_names anyway should be specified as non-None value, set something pls")
 
+            # append item
+
             self.the_pipe.append(self.items[j](**self.items_args[j]))
 
             if self.verbose:
                 print(self.the_pipe[j])
 
-            self.the_pipe[j].fit(blade_runner.train[self.X_names[j]].values, blade_runner.train[self.Y_names[j]].values)
+            # fit and predict
 
-            if self.output_spec[j] is None:
-                cols = numpy.array(self.X_names[j])[self.the_pipe[j].support_].tolist()
-                self.output_spec[j] = {x: blade_runner.train[x].dtype.name for x in cols}
-            blade_runner.train[self.output_names(j)] = self.the_pipe[j].predict(blade_runner.train[self.X_names[j]].values)
+            if self.the_pipe[j].__bleed__:
+
+                self.the_pipe[j].fit(blade_runner.data_frame[self.X_names[j]].values, blade_runner.data_frame[self.Y_names[j]].values)
+
+                if self.output_spec[j] is None:
+                    cols = numpy.array(self.X_names[j])[self.the_pipe[j].support_].tolist()
+                    self.output_spec[j] = {x: blade_runner.data_frame[x].dtype.name for x in cols}
+                blade_runner.data_frame[self.output_names(j)] = self.the_pipe[j].predict(blade_runner.data_frame[self.X_names[j]].values)
+
+            else:
+
+                self.the_pipe[j].fit(blade_runner.train[self.X_names[j]].values, blade_runner.train[self.Y_names[j]].values)
+
+                if self.output_spec[j] is None:
+                    cols = numpy.array(self.X_names[j])[self.the_pipe[j].support_].tolist()
+                    self.output_spec[j] = {x: blade_runner.train[x].dtype.name for x in cols}
+                blade_runner.train[self.output_names(j)] = self.the_pipe[j].predict(blade_runner.train[self.X_names[j]].values)
 
     def infer(self, on='train'):
 

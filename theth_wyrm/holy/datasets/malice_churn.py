@@ -2,7 +2,7 @@
 
 import numpy
 import pandas
-from mpydge.holy.data_keeper.keeper import Conductor
+from theth_wyrm.holy.data_keeper.keeper import Conductor
 
 import torch
 
@@ -15,7 +15,7 @@ def load(verbose=True, test_partition=0.2, validation_partition=0.2):
 
     outputs = ['Exited']
 
-    d = './mpydge/datasets/data/Churn_Modelling.csv'
+    d = './theth_wyrm/datasets/data/Churn_Modelling.csv'
     data_set = pandas.read_csv(d)
 
     for category in categorical_columns:

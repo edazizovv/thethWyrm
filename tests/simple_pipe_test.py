@@ -7,10 +7,10 @@ from sklearn.metrics import r2_score
 
 
 #
-from mpydge.chaotic.data import DataHandler
-from mpydge.chaotic.the_pipe import SimplePipe
-from mpydge.wrap.models.reg import XBR
-from mpydge.wrap.transformations.transform import LG, EX
+from theth_wyrm.chaotic.data import DataHandler
+from theth_wyrm.chaotic.the_pipe import SimplePipe
+from theth_wyrm.wrap.models.reg import XBR
+from theth_wyrm.wrap.transformations.transform import LG, EX
 from new_insane import PCA, ZerosReductor
 from sell_stone import NoRazor
 

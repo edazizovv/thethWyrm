@@ -2,8 +2,8 @@
 
 from torch import nn
 
-from mpydge.holy.models import Hydrogenium
-from mpydge.holy.utils import ERF
+from theth_wyrm.holy.models import Hydrogenium
+from theth_wyrm.holy.utils import ERF
 
 
 class LogitModel(Hydrogenium):

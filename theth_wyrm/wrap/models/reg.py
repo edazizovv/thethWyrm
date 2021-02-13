@@ -12,7 +12,7 @@ from xgboost import XGBRegressor
 
 
 #
-from mpydge.wrap.models.core import SupM1DScikit
+from theth_wyrm.wrap.models.core import SupM1DScikit
 
 
 #

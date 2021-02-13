@@ -7,7 +7,7 @@ import pandas
 
 
 #
-from mpydge.wrap.transformations.core import Transformation
+from theth_wyrm.wrap.transformations.core import Transformation
 
 
 #

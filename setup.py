@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="mpydge",
+    name="theth_wyrm",
     version="0.1.8.0",
     author="Edward Azizov",
     author_email="edazizovv@gmail.com",

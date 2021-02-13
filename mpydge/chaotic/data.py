@@ -11,7 +11,8 @@ class Fold:
 
     def __init__(self, data_frame, mask):
 
-        self._data_frame = data_frame.copy(deep=False)
+        # self._data_frame = data_frame.copy(deep=False)
+        self._data_frame = data_frame
         self._mask = mask
 
     def __getitem__(self, item):

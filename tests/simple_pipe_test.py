@@ -10,7 +10,7 @@ from sklearn.metrics import r2_score
 from mpydge.chaotic.data import DataHandler
 from mpydge.chaotic.the_pipe import SimplePipe
 from mpydge.wrap.models.reg import XBR
-# from new_insane import PCA, XBR, ZerosReductor
+from mpydge.wrap.transformations.transform import LG, EX
 from new_insane import PCA, ZerosReductor
 from sell_stone import NoRazor
 
@@ -38,6 +38,7 @@ embedder_names = ['EMB_{0}'.format(j) for j in range(embedding_len)]
 embedder_kwargs = join_dicts({'rfe_cv': False, 'n_components': embedding_len}, {})
 
 target = 'price'
+target_sub = 'price_sub'
 # qualitative = ['cut', 'color', 'clarity']
 qualitative = []
 quantitative = ['carat', 'depth', 'table', 'x', 'y', 'z']
@@ -55,6 +56,48 @@ items_kwargs = [embedder_kwargs,
                 {},
                 model_kwargs]
 """
+
+X_names = [# target,
+           qualitative + quantitative,
+           embedder_names,
+           -1,
+           -1,
+           # target_sub
+           ]
+
+Y_names = [# target,
+           target,
+           target,
+           target,
+           target,
+           # target
+           ]
+
+output_spec = [# {target_sub: 'float64'},
+               {x: 'float64' for x in embedder_names},
+               None,
+               None,
+               {target: 'float64'},
+               # {target: 'float64'}
+               ]
+
+items = [# LG,
+         PCA,
+         ZerosReductor,
+         NoRazor,
+         XBR,
+         # EX
+         ]
+
+items_kwargs = [# {},
+                embedder_kwargs,
+                {},
+                {},
+                model_kwargs,
+                # {}
+                ]
+
+"""
 X_names = [qualitative + quantitative]
 
 Y_names = [target]
@@ -62,12 +105,13 @@ output_spec = [{target: 'float64'}]
 
 items = [XBR]
 items_kwargs = [model_kwargs]
-
+"""
 sample_points = [0.8]
 
 dta = DataHandler(data_frame=data, qualitative=qualitative, quantitative=quantitative,
                   sample_points=sample_points)
 dta.sample()
+
 
 pipe = SimplePipe(data=dta, items=items, items_args=items_kwargs,
                   X_names=X_names, Y_names=Y_names, output_spec=output_spec)

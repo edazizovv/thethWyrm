@@ -28,3 +28,6 @@ class MassApply(Transformation):
             X_[:, self.masks_out[j]] = self.transformations[j].predict(X_[:, self.masks_in[j]])
 
         return X_
+
+
+

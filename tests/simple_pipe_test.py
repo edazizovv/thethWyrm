@@ -11,8 +11,10 @@ from theth_wyrm.chaotic.data import DataHandler
 from theth_wyrm.chaotic.the_pipe import SimplePipe
 from theth_wyrm.wrap.models.reg import XBR
 from theth_wyrm.wrap.transformations.transform import LG, EX
-from new_insane import PCA, ZerosReductor
-from sell_stone import NoRazor
+# from new_insane import PCA, ZerosReductor
+from theth_wyrm.wrap.transformations.transform import PCA
+from theth_wyrm.wrap.selectors.selectors import ZerosReductor, NoRazor
+# from sell_stone import NoRazor
 
 
 def join_dicts(a, b):
@@ -35,7 +37,7 @@ model_kwargs = {'rfe_enabled': False, 'grid_cv': None}
 
 embedding_len = 2
 embedder_names = ['EMB_{0}'.format(j) for j in range(embedding_len)]
-embedder_kwargs = join_dicts({'rfe_cv': False, 'n_components': embedding_len}, {})
+embedder_kwargs = {'n_components': embedding_len}
 
 target = 'price'
 target_sub = 'price_sub'

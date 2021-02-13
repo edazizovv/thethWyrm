@@ -43,7 +43,7 @@ class SimplePipe:
                              blade_runner.train[self.Y_names[j]].values)
 
         if self.output_spec[j] is None:
-            cols = numpy.array(self.X_names[j])[self.the_pipe[j].support_].tolist()
+            cols = numpy.array(self.X_names[j])[self.the_pipe[j].support].tolist()
             self.output_spec[j] = {x: blade_runner.train[x].dtype.name for x in cols}
         blade_runner.train[self._output_names(j)] = self.the_pipe[j].predict(blade_runner.train[self.X_names[j]].values)
 
